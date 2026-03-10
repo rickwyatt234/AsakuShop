@@ -27,7 +27,7 @@ namespace AsakuShop.Core
         /// Reference to the <see cref="GameClock"/> that this controller drives.
         /// Populated automatically by <see cref="GameBootstrapper"/> if not set.
         /// </summary>
-        [Tooltip("GameClock whose ClockPaused flag is managed by this controller.")]
+        [Tooltip("GameClock whose pause stack is managed by this controller.")]
         public GameClock Clock;
 
         // ── Private state ─────────────────────────────────────────────────────────
@@ -37,6 +37,12 @@ namespace AsakuShop.Core
         /// was entered; used by <see cref="ResumeGame"/>.
         /// </summary>
         private GamePhase _prePausePhase = GamePhase.Boot;
+
+        /// <summary>Stores which phase was active before entering EndOfDaySummary, to know whether to return to Playing or go to Sleep.</summary>
+        private bool _summaryTriggeredByBed = false;
+
+        /// <summary>Stores the phase to return to after EndOfDaySummary dismissal.</summary>
+        private GamePhase _postSummaryPhase = GamePhase.Playing;
 
         // ── Unity lifecycle ──────────────────────────────────────────────────────
 
@@ -51,6 +57,13 @@ namespace AsakuShop.Core
 
             Instance = this;
             DontDestroyOnLoad(gameObject);
+
+            CoreEvents.OnMidnightReached += HandleMidnightReached;
+        }
+
+        private void OnDestroy()
+        {
+            CoreEvents.OnMidnightReached -= HandleMidnightReached;
         }
 
         // ── Public API ───────────────────────────────────────────────────────────
@@ -80,11 +93,15 @@ namespace AsakuShop.Core
         /// <summary>
         /// Pauses the game: remembers the current phase, then immediately enters
         /// <see cref="GamePhase.Paused"/>. Bypasses the legal-transition check
-        /// because the player can pause from any phase at any time.
+        /// because the player can pause from any active phase at any time.
+        /// Cannot be called from <see cref="GamePhase.Boot"/>,
+        /// <see cref="GamePhase.MainMenu"/>, or when already paused.
         /// </summary>
         public void PauseGame()
         {
-            if (CurrentPhase == GamePhase.Paused) return;
+            if (CurrentPhase == GamePhase.Paused
+                || CurrentPhase == GamePhase.Boot
+                || CurrentPhase == GamePhase.MainMenu) return;
 
             _prePausePhase = CurrentPhase;
             GamePhase previous = CurrentPhase;
@@ -118,42 +135,85 @@ namespace AsakuShop.Core
         /// current phase is not a phase that freezes time).
         /// </summary>
         /// <returns>
-        /// <c>true</c> when time should advance; <c>false</c> for
-        /// <see cref="GamePhase.Paused"/>, <see cref="GamePhase.CraftingMenu"/>,
-        /// <see cref="GamePhase.Boot"/>, <see cref="GamePhase.MainMenu"/>,
-        /// <see cref="GamePhase.Sleep"/>, and <see cref="GamePhase.EndOfDaySummary"/>.
+        /// <c>true</c> when time should advance; <c>false</c> for all other phases.
+        /// Clock runs only during <see cref="GamePhase.Playing"/>.
         /// </returns>
         public bool IsClockRunning()
         {
-            switch (CurrentPhase)
+            return CurrentPhase == GamePhase.Playing;
+        }
+
+        /// <summary>
+        /// Called when the player interacts with a bed. Behavior depends on current time:
+        /// <list type="bullet">
+        ///   <item><description>Before midnight: transitions to EndOfDaySummary (then Sleep after dismissal).</description></item>
+        ///   <item><description>After midnight (Hour == 0 of the next logical day): skips summary, goes directly to Sleep.</description></item>
+        /// </list>
+        /// </summary>
+        public void TriggerBedInteraction()
+        {
+            if (Clock == null) return;
+
+            bool isAfterMidnight = Clock.CurrentTime.Hour == TimeConstants.MidnightHour && Clock.CurrentTime.DayIndex > 0;
+
+            if (isAfterMidnight)
             {
-                case GamePhase.Paused:
-                case GamePhase.CraftingMenu:
-                case GamePhase.Boot:
-                case GamePhase.MainMenu:
-                case GamePhase.Sleep:
-                case GamePhase.EndOfDaySummary:
-                    return false;
-                default:
-                    return true;
+                // Skip summary — go straight to sleep
+                _summaryTriggeredByBed = false;
+                RequestTransition(GamePhase.Sleep);
             }
+            else
+            {
+                // Show summary first, then sleep
+                _summaryTriggeredByBed = true;
+                _postSummaryPhase = GamePhase.Sleep;
+                RequestTransition(GamePhase.EndOfDaySummary);
+            }
+        }
+
+        /// <summary>
+        /// Called by UI when the player dismisses the EndOfDaySummary screen.
+        /// Transitions to Sleep (if bed-triggered) or back to Playing (if midnight-triggered).
+        /// </summary>
+        public void DismissEndOfDaySummary()
+        {
+            if (CurrentPhase != GamePhase.EndOfDaySummary)
+            {
+                Debug.LogWarning("[GameStateController] DismissEndOfDaySummary called but not in EndOfDaySummary phase.");
+                return;
+            }
+            RequestTransition(_postSummaryPhase);
         }
 
         // ── Private helpers ──────────────────────────────────────────────────────
 
         /// <summary>
-        /// Syncs <see cref="GameClock.ClockPaused"/> to the current phase.
-        /// The clock is paused for <see cref="GamePhase.Paused"/> and
-        /// <see cref="GamePhase.CraftingMenu"/> only. Other non-running phases
-        /// (Boot, MainMenu, Sleep, EndOfDaySummary) leave clock management to
-        /// those systems' own logic.
+        /// Updates the clock pause stack after a phase transition.
+        /// Entering <see cref="GamePhase.Playing"/> pops the controller's pause token;
+        /// entering any other phase pushes it.
         /// </summary>
         private void UpdateClockPaused()
         {
             if (Clock == null) return;
 
-            Clock.ClockPaused = CurrentPhase == GamePhase.Paused
-                             || CurrentPhase == GamePhase.CraftingMenu;
+            if (CurrentPhase == GamePhase.Playing)
+                Clock.PopClockPause("GameStateController");
+            else
+                Clock.PushClockPause("GameStateController");
+        }
+
+        /// <summary>
+        /// Handles the automatic midnight trigger for <see cref="GamePhase.EndOfDaySummary"/>.
+        /// Fired by <see cref="CoreEvents.OnMidnightReached"/> once per day.
+        /// Only acts when currently in <see cref="GamePhase.Playing"/>.
+        /// </summary>
+        private void HandleMidnightReached(int dayIndex)
+        {
+            if (CurrentPhase != GamePhase.Playing) return;
+
+            _summaryTriggeredByBed = false;
+            _postSummaryPhase = GamePhase.Playing;
+            RequestTransition(GamePhase.EndOfDaySummary);
         }
 
         /// <summary>
@@ -168,46 +228,25 @@ namespace AsakuShop.Core
                     return to == GamePhase.MainMenu;
 
                 case GamePhase.MainMenu:
-                    return to == GamePhase.ChooseWakeTime;
+                    return to == GamePhase.Playing;
 
-                case GamePhase.ChooseWakeTime:
-                    return to == GamePhase.TravelToMarket
-                        || to == GamePhase.TravelToStore
-                        || to == GamePhase.StoreOpen;
-
-                case GamePhase.TravelToMarket:
-                    return to == GamePhase.AtMarket;
-
-                case GamePhase.AtMarket:
-                    return to == GamePhase.TravelToStore
-                        || to == GamePhase.TravelToMarket;
-
-                case GamePhase.TravelToStore:
-                    return to == GamePhase.StoreOpen
-                        || to == GamePhase.StoreClosed;
-
-                case GamePhase.StoreOpen:
-                    return to == GamePhase.StoreClosed
-                        || to == GamePhase.CraftingMenu
-                        || to == GamePhase.Paused;
-
-                case GamePhase.StoreClosed:
+                case GamePhase.Playing:
                     return to == GamePhase.CraftingMenu
                         || to == GamePhase.EndOfDaySummary
-                        || to == GamePhase.Paused
-                        || to == GamePhase.TravelToMarket;
+                        || to == GamePhase.Sleep
+                        || to == GamePhase.Paused;
 
                 case GamePhase.CraftingMenu:
-                    return to == GamePhase.StoreOpen
-                        || to == GamePhase.StoreClosed;
+                    return to == GamePhase.Playing;
 
                 case GamePhase.EndOfDaySummary:
-                    return to == GamePhase.Sleep;
+                    return to == GamePhase.Playing
+                        || to == GamePhase.Sleep;
 
                 case GamePhase.Sleep:
-                    return to == GamePhase.ChooseWakeTime;
+                    return to == GamePhase.Playing;
 
-                // Paused is handled by ResumeGame; direct transitions are illegal.
+                // Paused is handled by ResumeGame; direct transitions via RequestTransition are illegal.
                 case GamePhase.Paused:
                     return false;
 

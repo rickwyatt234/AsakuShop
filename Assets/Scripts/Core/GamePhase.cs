@@ -1,45 +1,54 @@
 namespace AsakuShop.Core
 {
     /// <summary>
-    /// Represents every possible high-level state the game can be in.
-    /// <see cref="GameStateController"/> owns and transitions this value.
+    /// All top-level game phases. A phase only exists if it meaningfully changes
+    /// what systems are active, what input is accepted, or what the clock does.
+    /// Location (market, store, street) and store open/closed state are NOT phases —
+    /// they are tracked by their respective systems.
     /// </summary>
     public enum GamePhase
     {
-        /// <summary>Application is starting up; systems are initialising.</summary>
+        /// <summary>Application is initializing. No gameplay. Clock stopped.</summary>
         Boot,
 
-        /// <summary>The main menu is displayed.</summary>
+        /// <summary>Main menu / title screen. No gameplay. Clock stopped.</summary>
         MainMenu,
 
-        /// <summary>The player is selecting a wake time for the upcoming day.</summary>
-        ChooseWakeTime,
+        /// <summary>
+        /// The active game day. The player has full sandbox freedom:
+        /// walking around, visiting markets, running the store, crafting, etc.
+        /// Clock ticks continuously while in this phase.
+        /// </summary>
+        Playing,
 
-        /// <summary>The player is travelling to a wholesale market.</summary>
-        TravelToMarket,
-
-        /// <summary>The player is inside a wholesale market.</summary>
-        AtMarket,
-
-        /// <summary>The player is travelling back to the store.</summary>
-        TravelToStore,
-
-        /// <summary>The store is open and serving customers.</summary>
-        StoreOpen,
-
-        /// <summary>The store is closed; the player can craft, plan, or rest.</summary>
-        StoreClosed,
-
-        /// <summary>The crafting / preparation menu is open. Clock is paused.</summary>
+        /// <summary>
+        /// Full-screen crafting recipe selection menu. Clock is paused while open.
+        /// Once the player confirms a recipe, transitions back to Playing while
+        /// a HUD fill bar shows crafting progress — that progress is NOT a phase.
+        /// </summary>
         CraftingMenu,
 
-        /// <summary>The end-of-day summary screen is displayed.</summary>
+        /// <summary>
+        /// End-of-day summary screen. Triggered at midnight automatically, or when
+        /// the player interacts with a bed before midnight. Clock stopped.
+        /// After dismissal: returns to Playing (if midnight-triggered) or transitions
+        /// to Sleep (if bed-triggered before midnight).
+        /// </summary>
         EndOfDaySummary,
 
-        /// <summary>The player is sleeping; time is fast-forwarded to the wake time.</summary>
+        /// <summary>
+        /// Player is asleep. No input accepted. Clock fast-forwards to the
+        /// player-specified wake time. Transitions to Playing on completion.
+        /// Note: if the player goes to bed AFTER midnight, EndOfDaySummary is
+        /// skipped and this phase is entered directly.
+        /// </summary>
         Sleep,
 
-        /// <summary>The game is paused. Clock is paused.</summary>
-        Paused,
+        /// <summary>
+        /// Game is paused. Overlays any phase except Boot and MainMenu.
+        /// Clock stopped. Restores to previous phase on resume.
+        /// Can be triggered from anywhere at any time.
+        /// </summary>
+        Paused
     }
 }

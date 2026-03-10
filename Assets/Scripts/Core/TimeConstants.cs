@@ -57,5 +57,8 @@ namespace AsakuShop.Core
 
         /// <summary>Default store close minute (0 minutes past the hour).</summary>
         public const int DefaultStoreCloseMinute = 0;
+
+        /// <summary>The hour value (24-hour) at which midnight occurs and EndOfDaySummary auto-triggers.</summary>
+        public const int MidnightHour = 0;
     }
 }

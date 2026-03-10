@@ -52,6 +52,13 @@ namespace AsakuShop.Core
         /// </summary>
         public static event Action OnAfterLoad;
 
+        /// <summary>
+        /// Fired once per day exactly when the clock rolls to midnight (Hour=0, Minute=0).
+        /// GameStateController listens to this to trigger EndOfDaySummary automatically.
+        /// </summary>
+        /// <remarks>Parameter: the <c>DayIndex</c> of the new day.</remarks>
+        public static event Action<int> OnMidnightReached;
+
         // ── Raise helpers (internal use only) ───────────────────────────────────
 
         /// <summary>Raises <see cref="OnPhaseChanged"/>.</summary>
@@ -78,6 +85,10 @@ namespace AsakuShop.Core
         internal static void RaiseAfterLoad()
             => OnAfterLoad?.Invoke();
 
+        /// <summary>Fires <see cref="OnMidnightReached"/>. Called by <see cref="GameClock"/> only.</summary>
+        internal static void FireMidnightReached(int dayIndex)
+            => OnMidnightReached?.Invoke(dayIndex);
+
         // ── Cleanup ──────────────────────────────────────────────────────────────
 
         /// <summary>
@@ -92,6 +103,7 @@ namespace AsakuShop.Core
             OnDayEnded     = null;
             OnBeforeSave   = null;
             OnAfterLoad    = null;
+            OnMidnightReached = null;
         }
     }
 }
