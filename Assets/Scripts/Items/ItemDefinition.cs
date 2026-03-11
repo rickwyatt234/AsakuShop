@@ -43,6 +43,14 @@ namespace AsakuShop.Items
         public StorageType StorageType;
 
         /// <summary>
+        /// Physical footprint tier of this item. Determines the minimum shelf or
+        /// fixture size required to stock it on the shop floor. Small items fit
+        /// anywhere; Large items require large shelving only.
+        /// </summary>
+        [Tooltip("Minimum shelf size needed to stock this item. Small fits any shelf; Large requires a large shelf.")]
+        public StockingSize StockingSize;
+
+        /// <summary>
         /// The quality tier this item starts at when first created or purchased.
         /// For dry goods this is a fixed authored value; for ingredients it acts
         /// as the baseline for the per-crate quality roll.
