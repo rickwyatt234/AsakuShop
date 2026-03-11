@@ -78,8 +78,8 @@ MonoBehaviour:
   crouchSpeed: 1.5
   jumpSpeed: 4
   gravity: 9.81
-  mouseSensitivity: 2
-  strafeTiltAmount: 2
+  mouseSensitivity: 0.25
+  strafeTiltAmount: 1
   playerCamera: {fileID: 3616546790239871191}
   cameraHolder: {fileID: 78194986447386661}
   groundCheck: {fileID: 682168635288882950}
@@ -100,7 +100,7 @@ MonoBehaviour:
   currentBobIntensity: 0
   currentBobSpeed: 0
   targetTilt: 0
-  standingCameraHeight: 1.75
+  standingCameraHeight: 1
   crouchingCameraHeight: 1
   crouchingCharacterControllerHeight: 1
   standingCharacterControllerHeight: 1.8

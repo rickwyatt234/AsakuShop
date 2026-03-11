@@ -26,6 +26,10 @@ namespace AsakuShop.Core
 
             if (State.CurrentPhase == GamePhase.Boot)
                 State.RequestTransition(GamePhase.MainMenu);
+
+            //Lock mouse cursor
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
         }
 
         private void Start()
