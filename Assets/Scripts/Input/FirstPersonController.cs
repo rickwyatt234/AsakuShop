@@ -1,3 +1,4 @@
+using AsakuShop.Core;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -126,6 +127,9 @@ public class FirstPersonController : MonoBehaviour
 
         private void Update()
         {
+            if (GameStateController.Instance.CurrentPhase != GamePhase.Playing)
+                return;
+            
             isGrounded = Physics.CheckSphere(groundCheck.position, 0.2f, groundLayer, QueryTriggerInteraction.Ignore);
 
             currentState.UpdateState();

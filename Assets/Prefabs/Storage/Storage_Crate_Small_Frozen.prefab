@@ -1,0 +1,149 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &301581626417158398
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: b13c063c02badcc459d7ea71defc891f, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: b13c063c02badcc459d7ea71defc891f, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: b13c063c02badcc459d7ea71defc891f, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: b13c063c02badcc459d7ea71defc891f, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 9.112538
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: b13c063c02badcc459d7ea71defc891f, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.120019786
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: b13c063c02badcc459d7ea71defc891f, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 81.975204
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: b13c063c02badcc459d7ea71defc891f, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.7071067
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: b13c063c02badcc459d7ea71defc891f, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: b13c063c02badcc459d7ea71defc891f, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: b13c063c02badcc459d7ea71defc891f, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: b13c063c02badcc459d7ea71defc891f, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: b13c063c02badcc459d7ea71defc891f, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: b13c063c02badcc459d7ea71defc891f, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -7511558181221131132, guid: b13c063c02badcc459d7ea71defc891f, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 65610b7227676314f8521b4c2ede2680, type: 2}
+    - target: {fileID: -7511558181221131132, guid: b13c063c02badcc459d7ea71defc891f, type: 3}
+      propertyPath: 'm_Materials.Array.data[1]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 0bb3989c6980d674d85390f7c563a47f, type: 2}
+    - target: {fileID: 919132149155446097, guid: b13c063c02badcc459d7ea71defc891f, type: 3}
+      propertyPath: m_Name
+      value: Storage_Crate_Small_Frozen
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: b13c063c02badcc459d7ea71defc891f, type: 3}
+      propertyPath: m_Layer
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: b13c063c02badcc459d7ea71defc891f, type: 3}
+      propertyPath: m_StaticEditorFlags
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: b13c063c02badcc459d7ea71defc891f, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1571973037649267970}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: b13c063c02badcc459d7ea71defc891f, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2634843259733893343}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: b13c063c02badcc459d7ea71defc891f, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 605203898385721517}
+  m_SourcePrefab: {fileID: 100100000, guid: b13c063c02badcc459d7ea71defc891f, type: 3}
+--- !u!1 &643459724555855279 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: b13c063c02badcc459d7ea71defc891f, type: 3}
+  m_PrefabInstance: {fileID: 301581626417158398}
+  m_PrefabAsset: {fileID: 0}
+--- !u!65 &1571973037649267970
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 643459724555855279}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: -0.45, y: 0.44999993, z: 0.44999993}
+--- !u!114 &2634843259733893343
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 643459724555855279}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1b80d48b50fbc1f45b9dc7e977bddf44, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AsakuShop.Storage::AsakuShop.Storage.StorageContainer
+  storageType: 2
+  inventorySize: {x: 575, y: 400}
+  containerName: Small Wooden Crate(Frozen)
+--- !u!114 &605203898385721517
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 643459724555855279}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 954e428f39b70c84e80791a3f059a9ae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AsakuShop.Storage::AsakuShop.Storage.StorageInteraction

@@ -12,6 +12,8 @@ namespace AsakuShop.Input
         public bool run => inputActions.Player.Sprint.IsPressed();
         public bool crouch => inputActions.Player.Crouch.IsPressed();
         public bool interact => inputActions.Player.Interact.IsPressed();
+        public bool itemExamine => inputActions.Player.ItemExamine.IsPressed();
+        public Vector2 rotateInput => inputActions.Player.RotateItem.ReadValue<Vector2>();
 
         private void Awake()
         {

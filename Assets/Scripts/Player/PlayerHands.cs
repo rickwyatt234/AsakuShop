@@ -1,6 +1,9 @@
 using UnityEngine;
 using AsakuShop.Items;
 using AsakuShop.Input;
+using AsakuShop.Core;
+using AsakuShop.Storage;
+using AsakuShop.UI;
 
 namespace AsakuShop.Player
 {
@@ -12,6 +15,7 @@ namespace AsakuShop.Player
         public Transform playerCamera;
         public ItemInstance heldItem;
         private bool previousInteractState = false;
+        private bool previousExamineState = false;
 
             [HideInInspector] public IInputManager input;
             [HideInInspector] public GameObject heldItemVisual;
@@ -31,7 +35,18 @@ namespace AsakuShop.Player
         private void Update()
         {
             HandleInteraction();
+            HandleExamination();
             HandlePlacementPreview();
+        }
+
+        private void OnEnable()
+        {
+            CoreEvents.OnPhaseChanged += HandlePhaseChanged;
+        }
+
+        private void OnDisable()
+        {
+            CoreEvents.OnPhaseChanged -= HandlePhaseChanged;
         }
 #endregion
 
@@ -39,13 +54,19 @@ namespace AsakuShop.Player
 #region Interaction
         private void HandleInteraction()
         {
+            if (GameStateController.Instance.CurrentPhase != GamePhase.Playing)
+                return;
+
             bool currentInteractState = input.interact;
             bool interactPressed = currentInteractState && !previousInteractState;
             previousInteractState = currentInteractState;
 
             if (interactPressed)
             {
-                if (heldItem == null)
+                bool holdingItem = heldItem != null;
+                bool holdingContainer = heldItemVisual != null && heldItemVisual.GetComponent<StorageContainer>() != null;
+
+                if (!holdingItem && !holdingContainer)
                 {
                     TryPickupItem();
                 }
@@ -55,45 +76,151 @@ namespace AsakuShop.Player
                 }
             }
         }
+
+        private void HandleExamination()
+        {
+            // Allow examining storage containers OR held items
+            if (GameStateController.Instance.CurrentPhase != GamePhase.Playing)
+                return;
+
+            bool currentExamineState = input.itemExamine;
+            bool examinePressed = currentExamineState && !previousExamineState;
+            previousExamineState = currentExamineState;
+
+            if (examinePressed)
+            {
+                Ray ray = new Ray(playerCamera.position, playerCamera.forward);
+                
+                // Check for interactable first (storage containers) - allow trigger hits
+                if (Physics.Raycast(ray, out RaycastHit hit, 3f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide))
+                {
+                    IInteractable interactable = hit.collider.GetComponent<IInteractable>();
+                    if (interactable != null)
+                    {
+                        interactable.OnInteract();
+                        return;
+                    }
+                }
+
+                // Then check for held item examination
+                if (heldItem != null)
+                {
+                    ItemExaminer.Instance.StartExamination(heldItem);
+                }
+            }
+        }
+
+        private void HandlePhaseChanged(GamePhase previousPhase, GamePhase newPhase)
+        {
+            // When entering ItemExamination, hide the held item visual and preview item visual if they exist
+            if (newPhase == GamePhase.ItemExamination)
+            {
+                if (heldItemVisual != null)
+                    heldItemVisual.SetActive(false);
+
+                if (placementPreviewVisual != null)                
+                {
+                    Destroy(placementPreviewVisual);
+                    placementPreviewVisual = null;
+                }
+            }
+
+
+            // When leaving ItemExamination back to Playing, show the held item visual
+            if (previousPhase == GamePhase.ItemExamination && newPhase == GamePhase.Playing)
+            {
+                heldItemVisual.SetActive(true);
+            }
+        }
 #endregion
 
 
 #region Item Pickup and Placement
         private void TryPickupItem()
         {
-            //Raycast from center of screen to find item to pick up
             Ray ray = new Ray(playerCamera.position, playerCamera.forward);
-            if (Physics.Raycast(ray, out RaycastHit hit, 3f, LayerMask.GetMask("Item")))
+            if (Physics.Raycast(ray, out RaycastHit hit, 3f))
             {
-                //Debug.Log($"Hit object: {hit.collider.name}");
+                // First, check if it's an interactable (like storage containers)
+                if (input.itemExamine)
+                {
+                    IInteractable interactable = hit.collider.GetComponent<IInteractable>();
+                    if (interactable != null)
+                    {
+                        interactable.OnInteract();
+                        return;
+                    }
+                }
+
+                // Try to pick up storage container
+                StorageContainer storageContainer = hit.collider.GetComponent<StorageContainer>();
+                if (storageContainer != null)
+                {
+                    PickupStorageContainer(storageContainer);
+                    return;
+                }
+
+                // Try to pick up normal item
                 ItemPickup pickup = hit.collider.GetComponent<ItemPickup>();
                 if (pickup != null && pickup.itemInstance != null)
                 {
                     heldItem = pickup.itemInstance;
-                    Destroy(pickup.gameObject); // Remove item from world
+                    Destroy(pickup.gameObject);
                     InstantiateHeldItemVisual();
                 }
-                else 
+                else
                 {
-                    Debug.Log("No ItemPickup component found on hit object.");
+                    Debug.Log("No ItemPickup or StorageContainer found on hit object.");
                 }
             }
         }
 
+        private void PickupStorageContainer(StorageContainer container)
+        {
+            heldItemVisual = container.gameObject;
+            heldItemVisualTransform = heldItemVisual.transform;
+            heldItemVisualTransform.SetParent(playerCamera);
+            heldItemVisualTransform.localPosition = new Vector3(0.5f, -0.5f, 1f);
+            heldItemVisualTransform.localRotation = Quaternion.identity;
+            
+            // Disable the container's collider while held
+            Collider collider = container.GetComponent<Collider>();
+            if (collider != null)
+                collider.enabled = false;
+            
+            Debug.Log($"Picked up storage container: {container.name}");
+        }
+
         private void TryPlaceItem()
         {
-            // Implement item placement logic here
             if(validPlacement)
             {
-                // Place the item in the world at the preview location
+                // Check if holding a storage container
+                StorageContainer heldContainer = heldItemVisual?.GetComponent<StorageContainer>();
+                if (heldContainer != null)
+                {
+                    // Place container back in world
+                    heldItemVisualTransform.SetParent(null);
+                    heldItemVisualTransform.position = placementPreviewPosition;
+                    
+                    // Re-enable collider
+                    Collider collider = heldContainer.GetComponent<Collider>();
+                    if (collider != null)
+                        collider.enabled = true;
+                    
+                    heldItemVisual = null;
+                    heldItemVisualTransform = null;
+                    return;
+                }
+
+                // Normal item placement logic
                 GameObject placedItem = Instantiate(heldItem.Definition.WorldPrefab, placementPreviewPosition, Quaternion.identity);
                 ItemPickup pickup = placedItem.AddComponent<ItemPickup>();
                 pickup.itemInstance = heldItem;
 
-                SphereCollider collider = placedItem.AddComponent<SphereCollider>();
-                collider.radius = 0.3f;
+                SphereCollider collider2 = placedItem.AddComponent<SphereCollider>();
+                collider2.radius = 0.3f;
 
-                        // Clean up visuals
                 if (heldItemVisual != null)
                 {
                     Destroy(heldItemVisual);
@@ -133,10 +260,18 @@ namespace AsakuShop.Player
 
         private void HandlePlacementPreview()
         {
-            if (heldItem == null) return;
+            // Check if holding either an item or a container
+            bool holdingItem = heldItem != null;
+            bool holdingContainer = heldItemVisual != null && heldItemVisual.GetComponent<StorageContainer>() != null;
+            
+            if (!holdingItem && !holdingContainer) 
+                return;
 
-            //Raycast from center of screen to find valid placement location. If item
-            //can be placed on a valid ground layer, show a transparent preview of the item at that location.
+            // Don't show placement preview during examination or other non-playing phases
+            if (GameStateController.Instance.CurrentPhase != GamePhase.Playing)
+                return;
+
+            //Raycast from center of screen to find valid placement location
             Ray ray = new Ray(playerCamera.position, playerCamera.forward);
             if (Physics.Raycast(ray, out RaycastHit hit, 3f))
             {
@@ -144,25 +279,33 @@ namespace AsakuShop.Player
                 if (hit.collider.gameObject.layer == LayerMask.NameToLayer("Ground"))
                 {
                     validPlacement = true;
-                    // Show placement preview at hit.point
-                    if (placementPreviewVisual == null)
+                    
+                    // Only create/update preview for items, not containers
+                    if (holdingItem && heldItem != null)
                     {
-                        placementPreviewVisual = Instantiate(heldItem.Definition.WorldPrefab);
-                        // Make the preview semi-transparent or otherwise indicate it's a preview
-                        foreach (Renderer renderer in placementPreviewVisual.GetComponentsInChildren<Renderer>())
+                        if (placementPreviewVisual == null)
                         {
-                            foreach (Material mat in renderer.materials)
+                            placementPreviewVisual = Instantiate(heldItem.Definition.WorldPrefab);
+                            foreach (Renderer renderer in placementPreviewVisual.GetComponentsInChildren<Renderer>())
                             {
-                                Color color = mat.color;
-                                color.r *= 0.2f;  // Darken red
-                                color.g *= 0.2f;  // Darken green
-                                color.b *= 0.2f;  // Darken blue
-                                mat.color = color;
+                                foreach (Material mat in renderer.materials)
+                                {
+                                    Color color = mat.color;
+                                    color.r *= 0.2f;
+                                    color.g *= 0.2f;
+                                    color.b *= 0.2f;
+                                    mat.color = color;
+                                }
                             }
                         }
+                        placementPreviewVisual.transform.position = hit.point + Vector3.up * 0.45f;
+                        placementPreviewPosition = hit.point + Vector3.up * 0.45f;
                     }
-                    placementPreviewVisual.transform.position = hit.point + Vector3.up * 0.45f; // Slightly above ground to prevent z-fighting
-                    placementPreviewPosition = hit.point + Vector3.up * 0.45f;
+                    else if (holdingContainer)
+                    {
+                        // For containers, just update the position without a preview visual
+                        placementPreviewPosition = hit.point + Vector3.up * 0.45f;
+                    }
                 }
                 else
                 {
@@ -172,7 +315,6 @@ namespace AsakuShop.Player
                         Destroy(placementPreviewVisual);
                         placementPreviewVisual = null;
                     }
-                    // Hide or indicate invalid placement
                 }
             }
             else
@@ -183,7 +325,6 @@ namespace AsakuShop.Player
                     Destroy(placementPreviewVisual);
                     placementPreviewVisual = null;
                 }
-                // Hide or indicate invalid placement
             }
         }
 #endregion

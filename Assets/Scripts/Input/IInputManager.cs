@@ -10,5 +10,7 @@ namespace AsakuShop.Input
         bool run { get; }
         bool crouch { get; }
         bool interact { get; }
+        bool itemExamine { get; }
+        Vector2 rotateInput { get; }
     }
 }

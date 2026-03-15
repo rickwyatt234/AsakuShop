@@ -138,7 +138,8 @@ namespace AsakuShop.Core
         {
             if (Clock == null) return;
 
-            if (CurrentPhase == GamePhase.Playing)
+            // The clock should only be running during the Playing and ItemExamination phases. It is paused in all other phases.
+            if (CurrentPhase == GamePhase.Playing || CurrentPhase == GamePhase.ItemExamination)
                 Clock.PopClockPause("GameStateController");
             else
                 Clock.PushClockPause("GameStateController");
@@ -165,6 +166,7 @@ namespace AsakuShop.Core
 
                 case GamePhase.Playing:
                     return to == GamePhase.CraftingMenu
+                        || to == GamePhase.ItemExamination
                         || to == GamePhase.EndOfDaySummary
                         || to == GamePhase.Sleep
                         || to == GamePhase.Paused;
@@ -179,6 +181,10 @@ namespace AsakuShop.Core
                 case GamePhase.Sleep:
                     return to == GamePhase.Playing;
 
+                case GamePhase.ItemExamination:
+                    return to == GamePhase.Playing
+                        || to == GamePhase.Paused;
+
                 // Paused is handled by ResumeGame; direct transitions via RequestTransition are illegal.
                 case GamePhase.Paused:
                     return false;
@@ -186,6 +192,16 @@ namespace AsakuShop.Core
                 default:
                     return false;
             }
+        }
+#endregion
+
+
+#region Debugging
+        private void OnGUI()
+        {
+            GUILayout.BeginArea(new Rect(0, 60, 200, 20));
+            GUILayout.Label("Current Phase: " + CurrentPhase);
+            GUILayout.EndArea();
         }
 #endregion
     }
