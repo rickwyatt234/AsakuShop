@@ -20,7 +20,6 @@ namespace AsakuShop.Core
             EnsureClock();
             EnsureStateController();
             EnsureSaveManager();
-
             if (State.Clock == null)
                 State.Clock = Clock;
 

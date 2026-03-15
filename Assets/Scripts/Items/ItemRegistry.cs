@@ -6,20 +6,47 @@ namespace AsakuShop.Items
     // Singleton runtime registry that provides fast lookup of 
     // ItemDefinition ScriptableObjects by their string ItemDefinition.ItemId. Persists across scene loads.
     // Populate AllItems by dragging all item ScriptableObjects into the Inspector array, or let the registry 
-    // auto-populate at startup by loading all assets from a <c>Resources/Items</c> folder when the array is empty.
+    // auto-populate at startup by loading all assets from a Resources/Items folder when the array is empty.
 
     [DefaultExecutionOrder(-800)]
     public class ItemRegistry : MonoBehaviour
     {
+#region Singleton Implementation
         public static ItemRegistry Instance { get; private set; }
+#endregion
 
+
+#region Serialized Fields
         // All ItemDefinition assets known to the registry. If left empty in the Inspector the registry 
         // will attempt to load all definitions from Resources/Items/ at runtime.
         [Tooltip("All ItemDefinition assets. Leave empty to auto-load from Resources/Items/ at runtime.")]
         public ItemDefinition[] AllItems;
 
         private Dictionary<string, ItemDefinition> _registry;
+#endregion
 
+
+#region Initialization
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void Initialize()
+        {
+            EnsureInstance();
+        }
+        
+        private static void EnsureInstance()
+        {
+            if (Instance != null && Instance.gameObject != null)
+            {
+                return;
+            }
+            
+            GameObject go = new GameObject("[ItemRegistry]");
+            go.AddComponent<ItemRegistry>();
+        }
+#endregion
+
+
+#region Unity Methods
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -34,6 +61,8 @@ namespace AsakuShop.Items
 
             BuildRegistry();
         }
+#endregion
+
 
 #region Public Methods
         // Returns the ItemDefinition with the given itemId, or null if no match is found.
@@ -71,6 +100,8 @@ namespace AsakuShop.Items
         }
 #endregion
 
+
+#region Private Methods
         private void BuildRegistry()
         {
             _registry = new Dictionary<string, ItemDefinition>();
@@ -109,5 +140,6 @@ namespace AsakuShop.Items
                 _registry[def.ItemId] = def;
             }
         }
+#endregion
     }
 }

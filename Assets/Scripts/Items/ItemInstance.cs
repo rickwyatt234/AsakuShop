@@ -1,5 +1,6 @@
 using System;
 using AsakuShop.Core;
+using log4net.Appender;
 
 namespace AsakuShop.Items
 {

@@ -24,6 +24,9 @@ namespace AsakuShop.Items
         [Tooltip("Minimum shelf size needed to stock this item. Small fits any shelf; Large requires a large shelf.")]
         public StockingSize StockingSize;
 
+        [Tooltip("How much this item weighs in kilograms. For backpack and other storage")]
+        public float WeightKg;
+
         [Tooltip("Starting grade for new instances of this item.")]
         public ItemGrade BaseGrade;
 
@@ -45,10 +48,25 @@ namespace AsakuShop.Items
         [Tooltip("If true, this item can be used as an ingredient in crafting recipes.")]
         public bool IsCraftingIngredient;
 
+        [Tooltip("How this item looks in the world")]
+        public GameObject WorldPrefab;
+
         [Tooltip("UI icon sprite. Can be null in early development — UI should show a placeholder.")]
         public Sprite Icon;
 
         public bool IsPerishable => StorageType != StorageType.Dry;
+
+        // Returns true if this item is currently in optimal storage conditions 
+        // (e.g. refrigerated items are currently being stored in a refrigerator).
+        // Spoilage timer doubled when true.
+
+        // public bool IsInOptimalStorageConditions => StorageType switch
+        // {
+        //     StorageType.Dry => true, // Always optimal
+        //     StorageType.Refrigerated => StorageManager.Instance.IsRefrigerated, 
+        //     StorageType.Frozen => StorageManager.Instance.IsFrozen,
+        //     _ => true
+        // };
 
 
         private void OnValidate()

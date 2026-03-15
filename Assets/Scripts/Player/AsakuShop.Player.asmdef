@@ -1,0 +1,18 @@
+{
+    "name": "AsakuShop.Player",
+    "rootNamespace": "AsakuShop.Player",
+    "references": [
+        "GUID:2b2fd5f5c972e124181634fddc89466a",
+        "GUID:844a0b3ea1217b24ea6af18f5e3f3361",
+        "GUID:b0aba619104be9147a7cab568c45d574"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

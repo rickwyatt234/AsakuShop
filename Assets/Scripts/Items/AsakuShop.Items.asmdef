@@ -1,6 +1,6 @@
 {
     "name": "AsakuShop.Items",
-    "rootNamespace": "",
+    "rootNamespace": "AsakuShop.Items",
     "references": [
         "GUID:2b2fd5f5c972e124181634fddc89466a"
     ],

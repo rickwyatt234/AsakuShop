@@ -18,6 +18,7 @@ MonoBehaviour:
   Category: 0
   StorageType: 0
   StockingSize: 0
+  WeightKg: 1
   BaseGrade: 0
   BaseBuyPrice: 800
   BaseSellPrice: 850
@@ -25,4 +26,5 @@ MonoBehaviour:
   IsCrateItem: 1
   IsCraftingOutput: 0
   IsCraftingIngredient: 1
+  WorldPrefab: {fileID: 1549808009629849885, guid: 7afa3c722f290a04f8aad1a0357611cf, type: 3}
   Icon: {fileID: 0}

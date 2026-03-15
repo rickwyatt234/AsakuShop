@@ -30,7 +30,7 @@ namespace AsakuShop.Core
         public const float TravelTimeScale = 10.0f;
 #endregion
 
-#region Default times
+#region Default times (Probably won't be used)
 
         // Default wake-time hour (5 AM).
         public const int DefaultWakeTimeHour = 5;

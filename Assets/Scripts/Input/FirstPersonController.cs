@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace AsakuShop.Input
 {
@@ -52,8 +53,9 @@ public class FirstPersonController : MonoBehaviour
             [HideInInspector] public float targetTilt;
         private float bobTimer;
         private float fovVelocity;
-
         private float originalCamY;
+
+        [SerializeField] private Image crosshair;
 #endregion
     
 #region CrouchSettings
@@ -119,6 +121,7 @@ public class FirstPersonController : MonoBehaviour
         {
             currentState = stateFactory.Grounded();
             currentState.EnterState();
+
         }
 
         private void Update()

@@ -9,5 +9,6 @@ namespace AsakuShop.Input
         bool jump { get; }
         bool run { get; }
         bool crouch { get; }
+        bool interact { get; }
     }
 }
