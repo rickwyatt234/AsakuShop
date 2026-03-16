@@ -15,6 +15,10 @@ namespace AsakuShop.Input
         public bool itemExamine => inputActions.Player.ItemExamine.IsPressed();
         public Vector2 rotateInput => inputActions.Player.RotateItem.ReadValue<Vector2>();
 
+        public float rotatePreviewVertical => inputActions.Player.RotatePreviewVertical.ReadValue<float>();
+        public float rotatePreviewHorizontal => inputActions.Player.RotatePreviewHorizontal.ReadValue<float>();
+        public bool rotatePreviewModifier => inputActions.Player.RotatePreviewModifier.IsPressed(); // You need to add Shift input action
+
         private void Awake()
         {
             inputActions = new InputMappings();

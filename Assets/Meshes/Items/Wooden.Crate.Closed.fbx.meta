@@ -8,12 +8,12 @@ ModelImporter:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Wooden.Crate
-    second: {fileID: 2100000, guid: 4b086b0025320cc4c91d1c77c5d7159f, type: 2}
+    second: {fileID: 2100000, guid: c7a49e8d1fd9c854a90192b783aa8cad, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Wooden.Crate.001
-    second: {fileID: 2100000, guid: 42b19b4094f62c648a1c072940d3a8ea, type: 2}
+    second: {fileID: 2100000, guid: 26de268980fe38042b4dd9394a063c44, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
@@ -101,7 +101,7 @@ ModelImporter:
     armStretch: 0.05
     legStretch: 0.05
     feetSpacing: 0
-    globalScale: 100
+    globalScale: 1
     rootMotionBoneName: 
     hasTranslationDoF: 0
     hasExtraRoot: 0

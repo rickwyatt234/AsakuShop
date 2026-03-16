@@ -163,6 +163,33 @@ public partial class @InputMappings: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": true
+                },
+                {
+                    ""name"": ""RotatePreviewVertical"",
+                    ""type"": ""Value"",
+                    ""id"": ""1069f431-9934-4e63-ac69-1f2047dec623"",
+                    ""expectedControlType"": ""Axis"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": true
+                },
+                {
+                    ""name"": ""RotatePreviewHorizontal"",
+                    ""type"": ""Value"",
+                    ""id"": ""b2785f03-ae97-4f6f-ab48-53d1abee0250"",
+                    ""expectedControlType"": ""Axis"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": true
+                },
+                {
+                    ""name"": ""RotatePreviewModifier"",
+                    ""type"": ""Button"",
+                    ""id"": ""7886fd42-a31a-4b7a-80e6-13d5f77e96f9"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -385,6 +412,149 @@ public partial class @InputMappings: IInputActionCollection2, IDisposable
                     ""action"": ""RotateItem"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": ""1D Axis"",
+                    ""id"": ""49ddecd6-8de4-49eb-98ea-0e855f696fa3"",
+                    ""path"": ""1DAxis"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""RotatePreviewVertical"",
+                    ""isComposite"": true,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": ""negative"",
+                    ""id"": ""6563f638-12e8-4273-b09a-9a1567a5730b"",
+                    ""path"": ""<Mouse>/scroll/down"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""RotatePreviewVertical"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": ""positive"",
+                    ""id"": ""c1981157-21bf-43ce-9fab-c42ffb12f2ec"",
+                    ""path"": ""<Mouse>/scroll/up"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""RotatePreviewVertical"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": ""1D Axis"",
+                    ""id"": ""65e1ace5-50f5-4eab-a613-7cd07c002b8b"",
+                    ""path"": ""1DAxis"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""RotatePreviewVertical"",
+                    ""isComposite"": true,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": ""negative"",
+                    ""id"": ""505f26ad-1cbd-4ee1-8472-ac19fd6bcc07"",
+                    ""path"": ""<Gamepad>/leftTrigger"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""RotatePreviewVertical"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": ""positive"",
+                    ""id"": ""1b306507-a0be-46e2-b805-e9e5ac569e31"",
+                    ""path"": ""<Gamepad>/rightTrigger"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""RotatePreviewVertical"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": ""1D Axis"",
+                    ""id"": ""d5f628b4-c0c1-4101-9c5e-73c954b8409f"",
+                    ""path"": ""1DAxis"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""RotatePreviewHorizontal"",
+                    ""isComposite"": true,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": ""negative"",
+                    ""id"": ""d68dc5b5-6b56-4c47-89d7-7a6ab57693c7"",
+                    ""path"": ""<Gamepad>/dpad/left"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""RotatePreviewHorizontal"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": ""positive"",
+                    ""id"": ""82bb2228-ac6a-4dd6-a82c-e7312692f0f2"",
+                    ""path"": ""<Gamepad>/dpad/right"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""RotatePreviewHorizontal"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": ""1D Axis"",
+                    ""id"": ""88b1a37d-f169-41a0-bc67-1391457a4aaa"",
+                    ""path"": ""1DAxis"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""RotatePreviewHorizontal"",
+                    ""isComposite"": true,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": ""negative"",
+                    ""id"": ""70f0f088-94ac-4991-b326-434d456296e3"",
+                    ""path"": ""<Mouse>/scroll/down"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""RotatePreviewHorizontal"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": ""positive"",
+                    ""id"": ""900ab647-070f-4500-8049-2e1e28b832d8"",
+                    ""path"": ""<Mouse>/scroll/up"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""RotatePreviewHorizontal"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""c851d608-ab2c-4e64-8ef7-0db6aac07fd5"",
+                    ""path"": ""<Keyboard>/leftShift"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""RotatePreviewModifier"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -401,6 +571,9 @@ public partial class @InputMappings: IInputActionCollection2, IDisposable
         m_Player_Sprint = m_Player.FindAction("Sprint", throwIfNotFound: true);
         m_Player_ItemExamine = m_Player.FindAction("ItemExamine", throwIfNotFound: true);
         m_Player_RotateItem = m_Player.FindAction("RotateItem", throwIfNotFound: true);
+        m_Player_RotatePreviewVertical = m_Player.FindAction("RotatePreviewVertical", throwIfNotFound: true);
+        m_Player_RotatePreviewHorizontal = m_Player.FindAction("RotatePreviewHorizontal", throwIfNotFound: true);
+        m_Player_RotatePreviewModifier = m_Player.FindAction("RotatePreviewModifier", throwIfNotFound: true);
     }
 
     ~@InputMappings()
@@ -489,6 +662,9 @@ public partial class @InputMappings: IInputActionCollection2, IDisposable
     private readonly InputAction m_Player_Sprint;
     private readonly InputAction m_Player_ItemExamine;
     private readonly InputAction m_Player_RotateItem;
+    private readonly InputAction m_Player_RotatePreviewVertical;
+    private readonly InputAction m_Player_RotatePreviewHorizontal;
+    private readonly InputAction m_Player_RotatePreviewModifier;
     /// <summary>
     /// Provides access to input actions defined in input action map "Player".
     /// </summary>
@@ -532,6 +708,18 @@ public partial class @InputMappings: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "Player/RotateItem".
         /// </summary>
         public InputAction @RotateItem => m_Wrapper.m_Player_RotateItem;
+        /// <summary>
+        /// Provides access to the underlying input action "Player/RotatePreviewVertical".
+        /// </summary>
+        public InputAction @RotatePreviewVertical => m_Wrapper.m_Player_RotatePreviewVertical;
+        /// <summary>
+        /// Provides access to the underlying input action "Player/RotatePreviewHorizontal".
+        /// </summary>
+        public InputAction @RotatePreviewHorizontal => m_Wrapper.m_Player_RotatePreviewHorizontal;
+        /// <summary>
+        /// Provides access to the underlying input action "Player/RotatePreviewModifier".
+        /// </summary>
+        public InputAction @RotatePreviewModifier => m_Wrapper.m_Player_RotatePreviewModifier;
         /// <summary>
         /// Provides access to the underlying input action map instance.
         /// </summary>
@@ -582,6 +770,15 @@ public partial class @InputMappings: IInputActionCollection2, IDisposable
             @RotateItem.started += instance.OnRotateItem;
             @RotateItem.performed += instance.OnRotateItem;
             @RotateItem.canceled += instance.OnRotateItem;
+            @RotatePreviewVertical.started += instance.OnRotatePreviewVertical;
+            @RotatePreviewVertical.performed += instance.OnRotatePreviewVertical;
+            @RotatePreviewVertical.canceled += instance.OnRotatePreviewVertical;
+            @RotatePreviewHorizontal.started += instance.OnRotatePreviewHorizontal;
+            @RotatePreviewHorizontal.performed += instance.OnRotatePreviewHorizontal;
+            @RotatePreviewHorizontal.canceled += instance.OnRotatePreviewHorizontal;
+            @RotatePreviewModifier.started += instance.OnRotatePreviewModifier;
+            @RotatePreviewModifier.performed += instance.OnRotatePreviewModifier;
+            @RotatePreviewModifier.canceled += instance.OnRotatePreviewModifier;
         }
 
         /// <summary>
@@ -617,6 +814,15 @@ public partial class @InputMappings: IInputActionCollection2, IDisposable
             @RotateItem.started -= instance.OnRotateItem;
             @RotateItem.performed -= instance.OnRotateItem;
             @RotateItem.canceled -= instance.OnRotateItem;
+            @RotatePreviewVertical.started -= instance.OnRotatePreviewVertical;
+            @RotatePreviewVertical.performed -= instance.OnRotatePreviewVertical;
+            @RotatePreviewVertical.canceled -= instance.OnRotatePreviewVertical;
+            @RotatePreviewHorizontal.started -= instance.OnRotatePreviewHorizontal;
+            @RotatePreviewHorizontal.performed -= instance.OnRotatePreviewHorizontal;
+            @RotatePreviewHorizontal.canceled -= instance.OnRotatePreviewHorizontal;
+            @RotatePreviewModifier.started -= instance.OnRotatePreviewModifier;
+            @RotatePreviewModifier.performed -= instance.OnRotatePreviewModifier;
+            @RotatePreviewModifier.canceled -= instance.OnRotatePreviewModifier;
         }
 
         /// <summary>
@@ -713,5 +919,26 @@ public partial class @InputMappings: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnRotateItem(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "RotatePreviewVertical" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnRotatePreviewVertical(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "RotatePreviewHorizontal" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnRotatePreviewHorizontal(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "RotatePreviewModifier" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnRotatePreviewModifier(InputAction.CallbackContext context);
     }
 }

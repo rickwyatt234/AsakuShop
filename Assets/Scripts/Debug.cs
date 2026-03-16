@@ -19,6 +19,10 @@ namespace AsakuShop.Core
                 return;
             }
             SpawnItem("item_sack_of_rice", spawnPoint.position);
+            SpawnItem("item_sack_of_rice", spawnPoint.position);
+            SpawnItem("item_sack_of_rice", spawnPoint.position);
+            SpawnItem("item_sack_of_rice", spawnPoint.position);
+
         }
 
         public void SpawnItem(string itemID, Vector3 position)

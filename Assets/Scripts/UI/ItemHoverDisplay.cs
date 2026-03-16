@@ -1,62 +1,171 @@
 using UnityEngine;
 using TMPro;
-using AsakuShop.Core;
 using AsakuShop.Items;
+using AsakuShop.Core;
 
 namespace AsakuShop.UI
 {
     public class ItemHoverDisplay : MonoBehaviour
     {
-#region Fields
+        public static ItemHoverDisplay Instance { get; private set; }
+
         [SerializeField] private TextMeshProUGUI hoverLabel;
-        [SerializeField] private Canvas canvas;
-#endregion
+        [SerializeField] private CanvasGroup hoverLabelCanvasGroup;
+        [SerializeField] private RectTransform labelRect;
+        private ItemPickup currentHoveredPickup = null;
 
-
-#region Unity Methods
-        void Update()
+        private bool isShowingStorageLabel = false;
+        private void Awake()
         {
-            if (GameStateController.Instance.CurrentPhase != GamePhase.Playing)
+            if (Instance != null && Instance != this)
             {
-                HideLabel();
+                Destroy(gameObject);
                 return;
             }
-            CheckItemHover();
+            Instance = this;
+
+            if (hoverLabel == null)
+                hoverLabel = GetComponentInChildren<TextMeshProUGUI>();
+            
+            if (hoverLabelCanvasGroup == null)
+                hoverLabelCanvasGroup = GetComponent<CanvasGroup>();
+
+            if (labelRect == null)
+                labelRect = hoverLabel?.GetComponent<RectTransform>();
+
+            ResetDisplay();
         }
-    
-#endregion
 
+        private void Update()
+        {
+            // Update label position if showing storage label
+            if (isShowingStorageLabel && labelRect != null)
+            {
+                UpdateLabelPosition();
+            }
+            // Only do world item raycast when inventory is CLOSED
+            if (!InventoryState.IsOpen)
+            {
+                CheckItemHover();
+            }
+            // If inventory is open but we're NOT showing a storage label, hide it
+            else if (!isShowingStorageLabel)
+            {
+                ResetDisplay();
+            }
+        }
 
-#region Private Methods
+        private void UpdateLabelPosition()
+        {
+            // Get mouse position in screen space
+            Vector3 mousePos = UnityEngine.Input.mousePosition;
+            
+            // Offset label to the side of cursor so it doesn't block it
+            mousePos.x += 200f;  // Offset right
+            mousePos.y += 10f;   // Offset up
+            
+            // Set position
+            labelRect.position = mousePos;
+        }
+
         private void CheckItemHover()
         {
-            Ray ray = new Ray(Camera.main.transform.position, Camera.main.transform.forward);
-            if (Physics.Raycast(ray, out RaycastHit hit, 3f, LayerMask.GetMask("Item"), QueryTriggerInteraction.Ignore))
+            if (Camera.main == null)
             {
-                ItemPickup itemPickup = hit.collider.GetComponent<ItemPickup>();
-                if (itemPickup != null && itemPickup.itemInstance != null)
+                ResetDisplay();
+                return;
+            }
+
+            Ray ray = new Ray(Camera.main.transform.position, Camera.main.transform.forward);
+            RaycastHit[] hits = Physics.RaycastAll(ray, 5f, LayerMask.GetMask("Item"));
+
+
+            ItemPickup hoveredPickup = null;
+
+            if (hits.Length > 0)
+            {
+                for (int i = 0; i < hits.Length; i++)
                 {
-                    ShowLabel(itemPickup.itemInstance);                    
-                    return;
+                    RaycastHit hit = hits[i];
+
+                    ItemPickup itemPickup = hit.collider.GetComponent<ItemPickup>();
+
+                    if (itemPickup != null && itemPickup.itemInstance != null)
+                    {
+                        hoveredPickup = itemPickup;
+                        break;
+                    }
                 }
             }
 
-            HideLabel();
+            bool stateChanged = hoveredPickup != currentHoveredPickup;
+
+            if (stateChanged)
+            {
+                currentHoveredPickup = hoveredPickup;
+
+                if (hoveredPickup != null && hoveredPickup.itemInstance != null)
+                {
+                    ShowLabel(hoveredPickup.itemInstance);
+                }
+                else
+                {
+                    ResetDisplay();
+                }
+            }
         }
 
-        private void ShowLabel(ItemInstance itemInstance)
+        public void ShowLabel(ItemInstance itemInstance, bool showDetails = false)
         {
-            if (hoverLabel == null)                
+            if (itemInstance == null)
+            {
+                ResetDisplay();
                 return;
-            
-            hoverLabel.text = itemInstance.Definition.DisplayName;
-            canvas.gameObject.SetActive(true);
+            }
+
+            if (hoverLabel == null || hoverLabelCanvasGroup == null)
+                return;
+
+            // Set text
+            if (showDetails)
+            {
+                isShowingStorageLabel = true;  // Mark that we're showing a storage label
+                hoverLabel.text = $"{itemInstance.Definition.DisplayName}\n"
+                    + $"Grade: {itemInstance.CurrentGrade.ToDisplayString()} | "
+                    + $"¥{itemInstance.PurchasePrice} | "
+                    + $"{itemInstance.Definition.WeightKg}kg";
+            }
+            else
+            {
+                isShowingStorageLabel = false;
+                hoverLabel.text = itemInstance.Definition.DisplayName;
+            }
+
+            // Make label visible
+            if (hoverLabelCanvasGroup.alpha < 1f)
+            {
+                hoverLabelCanvasGroup.alpha = 1f;
+            }
         }
 
-        private void HideLabel()
+        public void HideLabel()
         {
-            hoverLabel.text = "";
+            ResetDisplay();
         }
-#endregion
+
+        private void ResetDisplay()
+        {
+            currentHoveredPickup = null;
+            isShowingStorageLabel = false;  // Clear flag
+
+            if (hoverLabel == null || hoverLabelCanvasGroup == null)
+                return;
+
+            hoverLabel.text = "";
+            if (hoverLabelCanvasGroup.alpha > 0f)
+            {
+                hoverLabelCanvasGroup.alpha = 0f;
+            }
+        }
     }
 }

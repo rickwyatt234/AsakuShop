@@ -17,6 +17,7 @@ namespace AsakuShop.Storage
             if (container != null)
             {
                 container.OpenInventory();
+                //Debug.Log("Interacted with storage container: " + gameObject.name);
             }
         }
     }

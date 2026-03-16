@@ -1,3 +1,4 @@
+
 namespace AsakuShop.Input
 {
     public abstract class PlayerBaseState

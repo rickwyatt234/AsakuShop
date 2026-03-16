@@ -6,23 +6,25 @@ using TMPro;
 
 namespace AsakuShop.Storage
 {
-    /// <summary>
-    /// UI controller for the storage inventory window.
-    /// Manages item views and drag/drop logic.
-    /// </summary>
     public class StorageInventoryUI : MonoBehaviour
     {
+        public static StorageInventoryUI Instance { get; private set; }
+        public static bool IsInventoryOpen { get; private set; } = false;
+
         [SerializeField] private Canvas inventoryCanvas;
         [SerializeField] private RectTransform itemContainer;
         [SerializeField] private GameObject itemViewPrefab;
         [SerializeField] private TextMeshProUGUI containerNameText;
         [SerializeField] private Button closeButton;
+        [SerializeField] private CanvasGroup crosshairCanvasGroup;
 
         private StorageContainer currentContainer;
         private Transform playerCamera;
 
         private void Awake()
         {
+            Instance = this;
+            
             playerCamera = Camera.main.transform;
 
             if (closeButton != null)
@@ -38,9 +40,21 @@ namespace AsakuShop.Storage
                 return;
 
             currentContainer = container;
+            InventoryState.IsOpen = true;
+            
+            // Show mouse cursor
+            Cursor.visible = true;
+            Cursor.lockState = CursorLockMode.None;
 
             if (inventoryCanvas != null)
+            {
                 inventoryCanvas.gameObject.SetActive(true);
+            }
+
+            if (crosshairCanvasGroup != null)
+            {
+                crosshairCanvasGroup.alpha = 0f; // Hide crosshair when inventory is open
+            }
 
             if (containerNameText != null)
                 containerNameText.text = container.name;
@@ -48,35 +62,80 @@ namespace AsakuShop.Storage
             RefreshUI();
         }
 
-        private void RefreshUI()
+        public void RefreshUI(StorageContainer container = null)
         {
+            
             if (itemContainer != null)
             {
-                // Clear existing items
                 foreach (Transform child in itemContainer)
                     Destroy(child.gameObject);
             }
 
-            if (currentContainer == null)
-                return;
-
-            // Create item views for all items in container
-            foreach (var entry in currentContainer.Inventory.GetAllItems())
+            // Use provided container or fall back to currentContainer
+            StorageContainer targetContainer = container ?? currentContainer;
+            
+            if (targetContainer == null)
             {
-                CreateItemView(entry);
+                return;
+            }
+
+            var items = targetContainer.Inventory.GetAllItems();
+            //($"Found {items.Count} items in inventory");
+            
+            foreach (var entry in items)
+            {
+                if (entry.itemInstance?.Definition != null)
+                {
+                    CreateItemView(entry);
+                }
             }
         }
 
         private void CreateItemView(StorageItemEntry entry)
         {
-            if (itemViewPrefab == null || itemContainer == null)
+            
+            if (itemViewPrefab == null)
+            {
                 return;
+            }
+            
+            if (itemContainer == null)
+            {
+                return;
+            }
 
-            GameObject viewGo = Instantiate(itemViewPrefab, itemContainer);
+            if (inventoryCanvas == null)
+            {
+                return;
+            }
+
+            Rect containerRect = itemContainer.rect;
+
+            GameObject viewGo = Instantiate(itemViewPrefab);
+            
+            RectTransform viewRect = viewGo.GetComponent<RectTransform>();
+            if (viewRect != null)
+            {
+                viewRect.SetParent(itemContainer, false);
+                viewRect.anchoredPosition = entry.uiPosition;
+                // Don't force size - let the prefab define it
+            }
+            else
+            {
+                Destroy(viewGo);
+                return;
+            }
+
             StorageItemView view = viewGo.GetComponent<StorageItemView>();
 
             if (view != null)
-                view.Initialize(entry, this);
+            {
+                view.InitializeWithCanvas(entry, this, inventoryCanvas, containerRect);
+            }
+            else
+            {
+                Destroy(viewGo);
+            }
         }
 
         public void UpdateItemPosition(StorageItemEntry entry, Vector2 newPos)
@@ -93,24 +152,47 @@ namespace AsakuShop.Storage
             // Remove from container
             currentContainer.TryRemoveItem(entry.itemInstance);
 
-            // Spawn in world near player
+            // FIX: Drop offset away from container to prevent intersection
+            Vector3 containerPos = currentContainer.transform.position;
+            Vector3 dropPos = containerPos + Vector3.up * 2f + (playerCamera.position - containerPos).normalized * 1f; // Drop in front of player
+
+            // Spawn in world near container
             GameObject worldItem = Instantiate(
                 entry.itemInstance.Definition.WorldPrefab,
-                playerCamera.position + playerCamera.forward * 2f,
+                dropPos,
                 Quaternion.identity
             );
 
             ItemPickup pickup = worldItem.AddComponent<ItemPickup>();
             pickup.itemInstance = entry.itemInstance;
 
+            Rigidbody rb = worldItem.GetComponent<Rigidbody>();
+            if (rb == null)
+                rb = worldItem.AddComponent<Rigidbody>();
+            rb.isKinematic = false;
+            rb.useGravity = true;
+            rb.linearVelocity = Vector3.zero;
+
             SphereCollider collider = worldItem.AddComponent<SphereCollider>();
             collider.radius = 0.3f;
+
         }
 
         public void CloseInventory()
         {
             if (inventoryCanvas != null)
                 inventoryCanvas.gameObject.SetActive(false);
+
+            InventoryState.IsOpen = false;
+            
+            // Hide mouse cursor
+            Cursor.visible = false;
+            Cursor.lockState = CursorLockMode.Locked;
+
+            if (crosshairCanvasGroup != null)
+            {
+                crosshairCanvasGroup.alpha = 1f; // Show crosshair when inventory is closed
+            }
 
             currentContainer = null;
         }

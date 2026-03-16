@@ -58,9 +58,10 @@ namespace AsakuShop.Storage
         // Open the inventory UI for this container
         public void OpenInventory()
         {
-            var ui = FindFirstObjectByType<StorageInventoryUI>();
-            if (ui != null)
-                ui.OpenContainer(this);
+            if (StorageInventoryUI.Instance != null)
+                StorageInventoryUI.Instance.OpenContainer(this);
+            else
+                Debug.LogError("StorageInventoryUI Instance not found!");
         }
     }
 }

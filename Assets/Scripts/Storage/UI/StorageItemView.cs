@@ -1,25 +1,22 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using AsakuShop.UI;
 using TMPro;
 
 namespace AsakuShop.Storage
 {
-    /// <summary>
-    /// Draggable item view in the inventory UI.
-    /// Displays a preview sprite and allows dragging within inventory bounds.
-    /// </summary>
-    public class StorageItemView : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
+    public class StorageItemView : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerEnterHandler, IPointerExitHandler
     {
         public StorageItemEntry Entry { get; private set; }
         public RectTransform RectTransform { get; private set; }
 
         [SerializeField] private Image itemImage;
-        [SerializeField] private TextMeshProUGUI itemNameText;
 
         private CanvasGroup canvasGroup;
         private Canvas rootCanvas;
         private RectTransform inventoryRect;
+        private Rect containerBounds;
         private Vector2 originalLocalPos;
         private Vector2 dragOffset;
         private StorageInventoryUI inventoryUI;
@@ -32,34 +29,86 @@ namespace AsakuShop.Storage
 
         public void Initialize(StorageItemEntry entry, StorageInventoryUI controller)
         {
-            Entry = entry;
-            inventoryUI = controller;
-
-            rootCanvas = GetComponentInParent<Canvas>();
-            inventoryRect = rootCanvas.GetComponent<RectTransform>();
-
-            // Set initial position
-            RectTransform.anchoredPosition = entry.uiPosition;
-
-            // Display item name
-            if (itemNameText != null && entry.itemInstance != null)
-                itemNameText.text = entry.itemInstance.Definition.DisplayName;
-
-            // Display preview sprite
-            if (itemImage != null && entry.itemInstance != null && ItemPreviewManager.Instance != null)
-            {
-                var sprite = ItemPreviewManager.Instance.GetPreviewSprite(entry.itemInstance.Definition);
-                if (sprite != null)
-                {
-                    itemImage.sprite = sprite;
-                    itemImage.preserveAspect = true;
-                    itemImage.alphaHitTestMinimumThreshold = 0.1f;
-                }
-            }
+            InitializeWithCanvas(entry, controller, GetComponentInParent<Canvas>(), Rect.zero);
         }
 
+        public void InitializeWithCanvas(StorageItemEntry entry, StorageInventoryUI controller, Canvas parentCanvas, Rect containerBounds)
+        {
+            Entry = entry;
+            inventoryUI = controller;
+            this.containerBounds = containerBounds;
+
+            rootCanvas = parentCanvas;
+            
+            if (rootCanvas == null)
+            {
+                return;
+            }
+
+            inventoryRect = rootCanvas.GetComponent<RectTransform>();
+            
+            if (inventoryRect == null)
+            {
+                return;
+            }
+
+            RectTransform.anchoredPosition = entry.uiPosition;
+
+             // Load and set preview sprite
+             if (itemImage != null && entry.itemInstance != null && entry.itemInstance.Definition != null)
+             {
+                 var sprite = ItemPreviewManager.Instance.GetPreviewSprite(entry.itemInstance.Definition);
+                 
+                 if (sprite != null)
+                 {
+                     itemImage.sprite = sprite;
+                     itemImage.preserveAspect = true;
+                     itemImage.alphaHitTestMinimumThreshold = 0.1f;
+                 }
+                 else
+                 {
+                     itemImage.color = new Color(0.5f, 0.5f, 0.5f, 1f);
+                 }
+             }
+
+            // // Load and set preview sprite - WITH DEBUGGING
+            // if (itemImage != null && entry.itemInstance != null && entry.itemInstance.Definition != null)
+            // {
+                
+            //     if (ItemPreviewManager.Instance == null)
+            //     {
+            //         return;
+            //     }
+                
+            //     // FORCE color to white (fully opaque)
+            //     itemImage.color = Color.white;
+                
+            //     var sprite = ItemPreviewManager.Instance.GetPreviewSprite(entry.itemInstance.Definition);
+
+                
+            //     if (sprite != null)
+            //     {
+            //         itemImage.sprite = sprite;
+            //         itemImage.preserveAspect = true;
+            //         itemImage.alphaHitTestMinimumThreshold = 0.1f;
+            //     }
+            //     else
+            //     {
+            //         itemImage.color = new Color(0.5f, 0.5f, 0.5f, 1f);
+            //     }
+            // }
+        }
+
+
+#region Drag Handlers
         public void OnBeginDrag(PointerEventData eventData)
         {
+            // FIX: Add null checks before using these
+            if (rootCanvas == null || inventoryRect == null)
+            {
+                return;
+            }
+
             originalLocalPos = RectTransform.anchoredPosition;
             canvasGroup.alpha = 0.7f;
             canvasGroup.blocksRaycasts = false;
@@ -77,6 +126,12 @@ namespace AsakuShop.Storage
 
         public void OnDrag(PointerEventData eventData)
         {
+            // FIX: Add null checks
+            if (rootCanvas == null || inventoryRect == null)
+            {
+                return;
+            }
+
             if (RectTransformUtility.ScreenPointToLocalPointInRectangle(
                     inventoryRect,
                     eventData.position,
@@ -105,18 +160,38 @@ namespace AsakuShop.Storage
                 Destroy(gameObject); // Remove from UI
             }
         }
+#endregion
+
+
+#region Hover Handlers
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            if (Entry.itemInstance != null && ItemHoverDisplay.Instance != null)
+            {
+                ItemHoverDisplay.Instance.ShowLabel(Entry.itemInstance, showDetails: true);
+            }
+        }
+
+        public void OnPointerExit(PointerEventData eventData)
+        {
+            if (ItemHoverDisplay.Instance != null)
+            {
+                ItemHoverDisplay.Instance.HideLabel();
+            }
+        }
 
         private bool IsWithinInventoryBounds(Vector2 localPos)
         {
-            if (inventoryRect == null)
-                return false;
+            if (containerBounds == Rect.zero)
+            {
+                return true;
+            }
 
-            return RectTransformUtility.RectangleContainsScreenPoint(
-                inventoryRect,
-                RectTransformUtility.WorldToScreenPoint(rootCanvas.worldCamera, 
-                    inventoryRect.TransformPoint(localPos)),
-                rootCanvas.worldCamera
-            );
+            // Check if position is within container bounds
+            bool isInside = containerBounds.Contains(localPos);
+            
+            return isInside;
         }
+#endregion
     }
 }
