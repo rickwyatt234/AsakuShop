@@ -1,6 +1,5 @@
 using UnityEngine;
 using AsakuShop.Items;
-using AsakuShop.Core;
 using System.Collections.Generic;
 
 namespace AsakuShop.Storage
@@ -9,13 +8,16 @@ namespace AsakuShop.Storage
     {
         [SerializeField] private StorageType storageType = StorageType.Dry;
         [SerializeField] private Vector2 inventorySize = new Vector2(500, 400); // UI window size
-        [SerializeField] private string containerName = "Container";
+        [SerializeField] private string containerID = "Container001";
+        public string containerName = "Container";
+        [SerializeField] private float maxWeightCapacity = 50f; // max weight in kg
 
         private StorageInventory inventory;
 
         public StorageType StorageType => storageType;
         public StorageInventory Inventory => inventory;
         public Vector2 InventorySize => inventorySize;
+        public float MaxWeightCapacity => maxWeightCapacity;
 
         private void Awake()
         {
@@ -54,6 +56,17 @@ namespace AsakuShop.Storage
 
         public int GetCapacity() => int.MaxValue; // No fixed capacity, but could be limited
         public int GetCurrentCount() => inventory.Count;
+
+        public float GetCurrentWeight()
+        {
+            float totalWeight = 0f;
+            foreach (var entry in inventory.GetAllItems())
+            {
+                if (entry.itemInstance?.Definition != null)
+                    totalWeight += entry.itemInstance.Definition.WeightKg;
+            }
+            return totalWeight;
+        }
 
         // Open the inventory UI for this container
         public void OpenInventory()

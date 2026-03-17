@@ -13,7 +13,7 @@ namespace AsakuShop.Storage
         [SerializeField] private Transform previewAnchor;
         [SerializeField] private int textureSize = 2048;
         [Header("Preview Settings")]
-        [SerializeField] private Vector3 previewRotationEuler = new Vector3(20f, 45f, 0f);
+        [SerializeField] private Vector3 previewRotationEuler = new Vector3(0f, 0f, 0f);
         [SerializeField] private float previewScale = 2.0f;
         [SerializeField] private Vector3 previewOffset = Vector3.zero;
 

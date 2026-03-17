@@ -1,0 +1,16 @@
+{
+    "name": "AsakuShop.Economy",
+    "rootNamespace": "AsakuShop.Economy",
+    "references": [
+        "GUID:844a0b3ea1217b24ea6af18f5e3f3361"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

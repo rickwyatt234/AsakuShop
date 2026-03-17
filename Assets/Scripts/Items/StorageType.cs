@@ -15,5 +15,7 @@ namespace AsakuShop.Items
         // Requires a freezer. Covers frozen meals, ice cream, and any item
         // that must remain frozen to maintain grade.
         Frozen,
+
+        FreeForm // For storage containers that can hold multiple types of items, like shelves and cabinets
     }
 }

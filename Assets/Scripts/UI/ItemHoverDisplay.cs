@@ -79,7 +79,6 @@ namespace AsakuShop.UI
             Ray ray = new Ray(Camera.main.transform.position, Camera.main.transform.forward);
             RaycastHit[] hits = Physics.RaycastAll(ray, 5f, LayerMask.GetMask("Item"));
 
-
             ItemPickup hoveredPickup = null;
 
             if (hits.Length > 0)
@@ -87,9 +86,7 @@ namespace AsakuShop.UI
                 for (int i = 0; i < hits.Length; i++)
                 {
                     RaycastHit hit = hits[i];
-
                     ItemPickup itemPickup = hit.collider.GetComponent<ItemPickup>();
-
                     if (itemPickup != null && itemPickup.itemInstance != null)
                     {
                         hoveredPickup = itemPickup;
@@ -98,9 +95,7 @@ namespace AsakuShop.UI
                 }
             }
 
-            bool stateChanged = hoveredPickup != currentHoveredPickup;
-
-            if (stateChanged)
+            if (hoveredPickup != currentHoveredPickup)
             {
                 currentHoveredPickup = hoveredPickup;
 
@@ -148,12 +143,32 @@ namespace AsakuShop.UI
             }
         }
 
+        public void ShowLabelForContainer(string containerName)
+        {
+            if (string.IsNullOrEmpty(containerName))
+            {
+                ResetDisplay();
+                return;
+            }
+
+            if (hoverLabel == null || hoverLabelCanvasGroup == null)
+                return;
+
+            hoverLabel.text = containerName;
+            isShowingStorageLabel = true;
+
+            if (hoverLabelCanvasGroup.alpha < 1f)
+            {
+                hoverLabelCanvasGroup.alpha = 1f;
+            }
+        }
+
         public void HideLabel()
         {
             ResetDisplay();
         }
 
-        private void ResetDisplay()
+        public void ResetDisplay()
         {
             currentHoveredPickup = null;
             isShowingStorageLabel = false;  // Clear flag

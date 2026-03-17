@@ -39,8 +39,8 @@ namespace AsakuShop.Core
                 ItemPickup pickup = newObject.AddComponent<ItemPickup>();
                 pickup.itemInstance = instance;
 
-                SphereCollider collider = newObject.AddComponent<SphereCollider>();
-                collider.radius = 0.3f;
+                MeshCollider collider = newObject.AddComponent<MeshCollider>();
+                collider.convex = true;
             }
             else
             {

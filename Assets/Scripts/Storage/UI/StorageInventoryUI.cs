@@ -14,6 +14,7 @@ namespace AsakuShop.Storage
         [SerializeField] private Canvas inventoryCanvas;
         [SerializeField] private RectTransform itemContainer;
         [SerializeField] private GameObject itemViewPrefab;
+        [SerializeField] private TextMeshProUGUI weightCapacityText;
         [SerializeField] private TextMeshProUGUI containerNameText;
         [SerializeField] private Button closeButton;
         [SerializeField] private CanvasGroup crosshairCanvasGroup;
@@ -60,6 +61,7 @@ namespace AsakuShop.Storage
                 containerNameText.text = container.name;
 
             RefreshUI();
+            UpdateWeightDisplay();
         }
 
         public void RefreshUI(StorageContainer container = null)
@@ -89,8 +91,19 @@ namespace AsakuShop.Storage
                     CreateItemView(entry);
                 }
             }
+
+            UpdateWeightDisplay();
         }
 
+        private void UpdateWeightDisplay()
+        {
+            if (weightCapacityText != null && currentContainer != null)
+            {
+                float currentWeight = currentContainer.GetCurrentWeight();
+                float maxWeight = currentContainer.MaxWeightCapacity;
+                weightCapacityText.text = $"{currentWeight:F1}kg / {maxWeight:F1}kg";
+            }
+        }
         private void CreateItemView(StorageItemEntry entry)
         {
             
@@ -152,6 +165,9 @@ namespace AsakuShop.Storage
             // Remove from container
             currentContainer.TryRemoveItem(entry.itemInstance);
 
+            // Refresh UI to update weight display
+            RefreshUI();
+
             // FIX: Drop offset away from container to prevent intersection
             Vector3 containerPos = currentContainer.transform.position;
             Vector3 dropPos = containerPos + Vector3.up * 2f + (playerCamera.position - containerPos).normalized * 1f; // Drop in front of player
@@ -175,7 +191,6 @@ namespace AsakuShop.Storage
 
             SphereCollider collider = worldItem.AddComponent<SphereCollider>();
             collider.radius = 0.3f;
-
         }
 
         public void CloseInventory()

@@ -20,6 +20,7 @@ namespace AsakuShop.Core
             EnsureClock();
             EnsureStateController();
             EnsureSaveManager();
+            
             if (State.Clock == null)
                 State.Clock = Clock;
 
@@ -51,6 +52,7 @@ namespace AsakuShop.Core
             Clock = go.AddComponent<GameClock>();
             // DontDestroyOnLoad is called inside GameClock.Awake().
         }
+        
         private static void EnsureStateController()
         {
             if (GameStateController.Instance != null)
@@ -63,6 +65,7 @@ namespace AsakuShop.Core
             State = go.AddComponent<GameStateController>();
             // DontDestroyOnLoad is called inside GameStateController.Awake().
         }
+        
         private static void EnsureSaveManager()
         {
             if (SaveManager.Instance != null)

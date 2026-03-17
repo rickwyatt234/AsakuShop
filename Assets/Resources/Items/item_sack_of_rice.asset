@@ -26,5 +26,5 @@ MonoBehaviour:
   IsCrateItem: 1
   IsCraftingOutput: 0
   IsCraftingIngredient: 1
-  WorldPrefab: {fileID: 1549808009629849885, guid: 7afa3c722f290a04f8aad1a0357611cf, type: 3}
+  WorldPrefab: {fileID: 1691317780926314095, guid: 8d5e71b2b76b18446804b28cc8a5dd8a, type: 3}
   Icon: {fileID: 0}

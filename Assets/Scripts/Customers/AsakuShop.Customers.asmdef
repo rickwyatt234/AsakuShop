@@ -1,0 +1,17 @@
+{
+    "name": "AsakuShop.Customers",
+    "rootNamespace": "AsakuShop.Customers",
+    "references": [
+        "GUID:2d7fb0f8a5e85aa4caebf23ea217944f",
+        "GUID:81f3d0dd861e1024b8d69c5349634a62"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

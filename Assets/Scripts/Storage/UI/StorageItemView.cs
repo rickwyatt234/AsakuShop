@@ -70,33 +70,6 @@ namespace AsakuShop.Storage
                      itemImage.color = new Color(0.5f, 0.5f, 0.5f, 1f);
                  }
              }
-
-            // // Load and set preview sprite - WITH DEBUGGING
-            // if (itemImage != null && entry.itemInstance != null && entry.itemInstance.Definition != null)
-            // {
-                
-            //     if (ItemPreviewManager.Instance == null)
-            //     {
-            //         return;
-            //     }
-                
-            //     // FORCE color to white (fully opaque)
-            //     itemImage.color = Color.white;
-                
-            //     var sprite = ItemPreviewManager.Instance.GetPreviewSprite(entry.itemInstance.Definition);
-
-                
-            //     if (sprite != null)
-            //     {
-            //         itemImage.sprite = sprite;
-            //         itemImage.preserveAspect = true;
-            //         itemImage.alphaHitTestMinimumThreshold = 0.1f;
-            //     }
-            //     else
-            //     {
-            //         itemImage.color = new Color(0.5f, 0.5f, 0.5f, 1f);
-            //     }
-            // }
         }
 
 

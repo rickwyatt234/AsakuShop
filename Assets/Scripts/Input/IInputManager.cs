@@ -16,5 +16,11 @@ namespace AsakuShop.Input
         float rotatePreviewHorizontal { get; }
         bool rotatePreviewModifier { get; }
 
+        bool IsGamepadActive { get; }
+
+        string GetInteractKeyName();
+        string GetItemExamineKeyName();
+        string GetRotatePreviewKeyName();
+        string GetRotatePreviewModifierKeyName();
     }
 }

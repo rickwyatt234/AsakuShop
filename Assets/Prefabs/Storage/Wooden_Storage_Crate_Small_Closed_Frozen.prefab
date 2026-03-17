@@ -71,7 +71,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: AsakuShop.Storage::AsakuShop.Storage.StorageContainer
   storageType: 0
   inventorySize: {x: 500, y: 400}
-  containerName: Container
+  containerName: Small Wooden Crate (Frozen)
+  maxWeightCapacity: 50
 --- !u!114 &1744667468598282497
 MonoBehaviour:
   m_ObjectHideFlags: 0
