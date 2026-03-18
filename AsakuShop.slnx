@@ -1,12 +1,3 @@
 ﻿<Solution>
-  <Project Path="AsakuShop.Items.csproj" />
-  <Project Path="AsakuShop.Core.csproj" />
-  <Project Path="AsakuShop.Customers.csproj" />
-  <Project Path="AsakuShop.Storage.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
-  <Project Path="AsakuShop.Store.csproj" />
-  <Project Path="AsakuShop.Economy.csproj" />
-  <Project Path="AsakuShop.Input.csproj" />
-  <Project Path="AsakuShop.UI.csproj" />
-  <Project Path="AsakuShop.Player.csproj" />
 </Solution>

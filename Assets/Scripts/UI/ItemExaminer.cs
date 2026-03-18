@@ -44,7 +44,7 @@ namespace AsakuShop.UI
             input = FindFirstObjectByType<InputManager>();
             if (input == null)
             {
-                Debug.LogError("[ItemExaminer] Could not find InputManager in scene!");
+                UnityEngine.Debug.LogError("[ItemExaminer] Could not find InputManager in scene!");
             }
 
             // Disable canvas by default
@@ -59,7 +59,7 @@ namespace AsakuShop.UI
         {
             if (item == null)
             {
-                Debug.LogWarning("[ItemExaminer] Cannot examine null item.");
+                UnityEngine.Debug.LogWarning("[ItemExaminer] Cannot examine null item.");
                 return;
             }
 
@@ -68,7 +68,7 @@ namespace AsakuShop.UI
                 input = FindFirstObjectByType<InputManager>();
                 if (input == null)
                 {
-                    Debug.LogError("[ItemExaminer] Could not find InputManager in scene!");
+                    UnityEngine.Debug.LogError("[ItemExaminer] Could not find InputManager in scene!");
                     return;
                 }
             }
@@ -80,7 +80,7 @@ namespace AsakuShop.UI
             // Display the examination UI
             ShowExaminationUI();
 
-            previousExamineState = input.itemExamine; // Initialize previous state to current to prevent immediate exit
+            previousExamineState = input.examine; // Initialize previous state to current to prevent immediate exit
 
         }
 

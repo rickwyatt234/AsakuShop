@@ -1,4 +1,5 @@
 using AsakuShop.Core;
+using AsakuShop.UI;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -34,6 +35,7 @@ namespace AsakuShop.Input
             private float xRotation = 0f;
             private float currentTilt;
             private float tiltVelocity;
+            private IInteractable lastInteractable;
 
             public PlayerBaseState CurrentState { get => currentState; set => currentState = value; }
     #endregion
@@ -46,7 +48,7 @@ namespace AsakuShop.Input
             public float bobAmount = 0.001f;
             public float bobSpeed = 10f;
             public float recoilReturnSpeed = 5f;
-
+            public float interactDistance = 3f;
                 [HideInInspector] public Camera cam;
                 [HideInInspector] public float targetFov;
                 [HideInInspector] public float currentBobIntensity;
@@ -88,17 +90,6 @@ namespace AsakuShop.Input
             public bool useClimbTilt = true;
     #endregion
 
-    #region Debugs
-            [Header("Debug")]
-            public bool currentStateDebugLog = true;
-
-                void OnGUI()
-            {
-                // Display the current state
-                if (currentState != null && Application.isEditor && currentStateDebugLog)
-                    GUILayout.Label("Current State: " + currentState.GetType().Name);
-            }
-    #endregion
 
     #region Unity Methods
             private void Awake()
@@ -137,10 +128,11 @@ namespace AsakuShop.Input
                 currentState.UpdateState();
                 HandleRotation();
                 HandleFov();
+                DetectInteractable();
             }
     #endregion
 
-    #region Handlers
+    #region Movement Handlers
             public void HandleRotation()
             {
                 if (InventoryState.IsOpen)
@@ -208,6 +200,62 @@ namespace AsakuShop.Input
                 {
                     isInWater = false;
                 }
+            }
+    #endregion
+
+
+    #region Interactable Detection For Context Hints
+    // Detect interactables in front of the player and handle Context Hint UI
+    private void DetectInteractable()
+        {
+            //Create Raycast from center of screen to detect interactables
+            Ray ray = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
+
+            if (Physics.Raycast(ray, out RaycastHit hit, interactDistance))
+            {
+                IInteractable interactable = hit.collider.GetComponent<IInteractable>();
+
+                if (interactable != null)
+                {
+                    //If we hit an interactable, show the context hint
+                    if (lastInteractable != interactable)
+                    {
+                        lastInteractable = interactable;
+                        ContextHintDisplay.Instance.SetContext(ContextHintDisplay.Instance.GetContext(interactable));
+                    }
+
+                    //if player presses interact key, call the interactable's OnInteract method
+                    if (input.interact)
+                    {
+                        interactable.OnInteract();
+                    }
+
+                    //if player presses examine key, call the interactable's OnExamine method
+                    else if (input.examine)
+                    {
+                        interactable.OnExamine();
+                    }
+                }
+                else
+                {
+                    //If we are looking at something that is not interactable, hide the context hint
+                    lastInteractable = null;
+                    ContextHintDisplay.Instance.HideContext();
+                }       
+            } 
+        }
+    #endregion
+
+
+    #region Debugs
+            [Header("Debug")]
+            public bool currentStateDebugLog = true;
+
+                void OnGUI()
+            {
+                // Display the current state
+                if (currentState != null && Application.isEditor && currentStateDebugLog)
+                    GUILayout.Label("Current State: " + currentState.GetType().Name);
             }
     #endregion
     }

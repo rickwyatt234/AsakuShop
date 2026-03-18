@@ -36,14 +36,14 @@ namespace AsakuShop.Player
         {
             playerCamera = Camera.main.transform;
             input = GetComponent<IInputManager>();
-            Debug.Log("[PLAYER] PlayerHands initialized");
+            UnityEngine.Debug.Log("[PLAYER] PlayerHands initialized");
         }
 
         private void Update()
         {
             if (UnityEngine.Input.GetKeyDown(KeyCode.Escape) && activeCheckoutZone != null && activeCheckoutZone.IsPlayerCheckingOut())
             {
-                Debug.Log("[CHECKOUT DEBUG] ESC pressed, ending checkout");
+                UnityEngine.Debug.Log("[CHECKOUT UnityEngine.Debug] ESC pressed, ending checkout");
                 activeCheckoutZone.TryEndCheckout();
                 activeCheckoutZone = null;
             }
@@ -92,14 +92,14 @@ namespace AsakuShop.Player
                 // Try to start checkout if not already checking out
                 if (activeCheckoutZone == null || !activeCheckoutZone.IsPlayerCheckingOut())
                 {
-                    Debug.Log("[CHECKOUT DEBUG] Trying to start checkout...");
+                    UnityEngine.Debug.Log("[CHECKOUT UnityEngine.Debug] Trying to start checkout...");
                     TryStartCheckout();
                 }
 
                 // If checking out, try to scan items
                 if (activeCheckoutZone != null && activeCheckoutZone.IsPlayerCheckingOut())
                 {
-                    Debug.Log("[CHECKOUT DEBUG] Already at checkout, trying to scan item");
+                    UnityEngine.Debug.Log("[CHECKOUT UnityEngine.Debug] Already at checkout, trying to scan item");
                     TryScanItemAtTerminal(activeCheckoutZone.GetTerminal());
                 }
 
@@ -148,7 +148,7 @@ namespace AsakuShop.Player
             bool foundStorageUnit = false;
 
             string interactKey = input.GetInteractKeyName();
-            string examineKey = input.GetItemExamineKeyName();
+            string examineKey = input.GetExamineKeyName();
             string rotateKey = input.GetRotatePreviewKeyName();
             string rotateModifierKey = input.GetRotatePreviewModifierKeyName();
 
@@ -250,7 +250,7 @@ namespace AsakuShop.Player
             if (StorageInventoryUI.IsInventoryOpen)
                 return;
 
-            bool currentExamineState = input.itemExamine;
+            bool currentExamineState = input.examine;
             bool examinePressed = currentExamineState && !previousExamineState;
             previousExamineState = currentExamineState;
 
@@ -276,7 +276,7 @@ namespace AsakuShop.Player
                     {
                         if (heldItem != null)
                         {
-                            Debug.Log($"Tried to store {heldItem.Definition.DisplayName} in {container.name}");
+                            UnityEngine.Debug.Log($"Tried to store {heldItem.Definition.DisplayName} in {container.name}");
                             TryStoreItem(container);
                             return;
                         }
@@ -324,7 +324,7 @@ namespace AsakuShop.Player
             Ray ray = new Ray(playerCamera.position, playerCamera.forward);
             if (Physics.Raycast(ray, out RaycastHit hit, 3f))
             {
-                if (input.itemExamine)
+                if (input.examine)
                 {
                     IInteractable interactable = hit.collider.GetComponent<IInteractable>();
                     if (interactable != null)
@@ -387,7 +387,7 @@ namespace AsakuShop.Player
                         col.enabled = false;
                     }
 
-                    Debug.Log($"[PLAYER] Picked up counter item: {pickup.itemInstance.Definition.DisplayName}");
+                    UnityEngine.Debug.Log($"[PLAYER] Picked up counter item: {pickup.itemInstance.Definition.DisplayName}");
                 }
             }
         }
@@ -411,7 +411,7 @@ namespace AsakuShop.Player
             {
                 col.enabled = false;
             }
-            Debug.Log($"Picked up storage container: {container.name}");
+            UnityEngine.Debug.Log($"Picked up storage container: {container.name}");
         }
 
         private void PickupShelf(ShelfComponent shelf)
@@ -452,7 +452,7 @@ namespace AsakuShop.Player
                 col.enabled = false;
             }
 
-            Debug.Log($"Picked up shelf: {shelf.name}");
+            UnityEngine.Debug.Log($"Picked up shelf: {shelf.name}");
         }
 
         private void TryPlaceItem()
@@ -608,7 +608,7 @@ namespace AsakuShop.Player
 
             if (container.TryAddItem(heldItem))
             {
-                Debug.Log($"Stored {heldItem.Definition.DisplayName} in {container.name}");
+                UnityEngine.Debug.Log($"Stored {heldItem.Definition.DisplayName} in {container.name}");
 
                 if (heldItemVisual != null)
                 {
@@ -635,7 +635,7 @@ namespace AsakuShop.Player
             }
             else
             {
-                Debug.Log($"Cannot store {heldItem.Definition.DisplayName} in {container.name} - wrong storage type");
+                UnityEngine.Debug.Log($"Cannot store {heldItem.Definition.DisplayName} in {container.name} - wrong storage type");
                 if (placementPreviewVisual != null)
                 {
                     Destroy(placementPreviewVisual);
@@ -651,7 +651,7 @@ namespace AsakuShop.Player
 
             if (shelf.TryAddItem(heldItem))
             {
-                Debug.Log($"Stocked {heldItem.Definition.DisplayName} on {shelf.name}");
+                UnityEngine.Debug.Log($"Stocked {heldItem.Definition.DisplayName} on {shelf.name}");
 
                 ItemInstance itemToStock = heldItem;
                 Vector3 slotWorldPosition = shelf.GetSlotPosition(itemToStock);
@@ -701,7 +701,7 @@ namespace AsakuShop.Player
             }
             else
             {
-                Debug.Log($"Cannot stock {heldItem.Definition.DisplayName} on {shelf.name}");
+                UnityEngine.Debug.Log($"Cannot stock {heldItem.Definition.DisplayName} on {shelf.name}");
             }
         }
 #endregion
@@ -986,14 +986,14 @@ namespace AsakuShop.Player
 #region Checkout System
         public void SnapToCheckoutPosition(Transform position)
         {
-            Debug.Log($"[CHECKOUT DEBUG] SnapToCheckoutPosition called");
+            UnityEngine.Debug.Log($"[CHECKOUT UnityEngine.Debug] SnapToCheckoutPosition called");
             CharacterController controller = GetComponent<CharacterController>();
             if (controller != null) controller.enabled = false;
             transform.position = position.position;
             Quaternion newRotation = position.rotation * Quaternion.Euler(0, 180f, 0);
             transform.rotation = newRotation;
             if (controller != null) controller.enabled = true;
-            Debug.Log("[CHECKOUT DEBUG] ✓ Snap complete!");
+            UnityEngine.Debug.Log("[CHECKOUT UnityEngine.Debug] ✓ Snap complete!");
         }
 
         public void LockMovement(bool locked)
@@ -1001,11 +1001,11 @@ namespace AsakuShop.Player
             movementLocked = locked;
             if (locked)
             {
-                Debug.Log("[CHECKOUT DEBUG] Movement locked");
+                UnityEngine.Debug.Log("[CHECKOUT UnityEngine.Debug] Movement locked");
             }
             else
             {
-                Debug.Log("[CHECKOUT DEBUG] Movement unlocked");
+                UnityEngine.Debug.Log("[CHECKOUT UnityEngine.Debug] Movement unlocked");
             }
         }
 
@@ -1016,13 +1016,13 @@ namespace AsakuShop.Player
 
             if (heldItem == null)
             {
-                Debug.Log("[CHECKOUT] No item to scan");
+                UnityEngine.Debug.Log("[CHECKOUT] No item to scan");
                 return;
             }
 
             if (terminal.TryScanItem(heldItem))
             {
-                Debug.Log("[CHECKOUT] Item scanned!");
+                UnityEngine.Debug.Log("[CHECKOUT] Item scanned!");
 
                 if (heldItemVisual != null)
                 {
@@ -1033,53 +1033,53 @@ namespace AsakuShop.Player
             }
             else
             {
-                Debug.Log("[CHECKOUT] Failed to scan item");
+                UnityEngine.Debug.Log("[CHECKOUT] Failed to scan item");
             }
         }
 
         private void TryStartCheckout()
         {
-            Debug.Log("[CHECKOUT DEBUG] TryStartCheckout called");
+            UnityEngine.Debug.Log("[CHECKOUT UnityEngine.Debug] TryStartCheckout called");
             Ray ray = new Ray(playerCamera.position, playerCamera.forward);
 
             if (Physics.Raycast(ray, out RaycastHit hit, 3f))
             {
-                Debug.Log($"[CHECKOUT DEBUG] Raycast hit: {hit.collider.gameObject.name}");
+                UnityEngine.Debug.Log($"[CHECKOUT UnityEngine.Debug] Raycast hit: {hit.collider.gameObject.name}");
                 CheckoutZone zone = hit.collider.GetComponent<CheckoutZone>();
 
                 if (zone == null)
                 {
-                    Debug.Log("[CHECKOUT DEBUG] No CheckoutZone in raycast hit");
+                    UnityEngine.Debug.Log("[CHECKOUT UnityEngine.Debug] No CheckoutZone in raycast hit");
                 }
 
                 if (zone != null)
                 {
-                    Debug.Log("[CHECKOUT DEBUG] Found CheckoutZone");
+                    UnityEngine.Debug.Log("[CHECKOUT UnityEngine.Debug] Found CheckoutZone");
 
                     if (!zone.IsPlayerCheckingOut())
                     {
-                        Debug.Log("[CHECKOUT DEBUG] Starting checkout...");
+                        UnityEngine.Debug.Log("[CHECKOUT UnityEngine.Debug] Starting checkout...");
                         zone.TryStartCheckout(this);
                         activeCheckoutZone = zone;
                     }
                     else
                     {
-                        Debug.Log("[CHECKOUT DEBUG] Already checking out");
+                        UnityEngine.Debug.Log("[CHECKOUT UnityEngine.Debug] Already checking out");
                     }
                 }
                 else
                 {
-                    Debug.Log("[CHECKOUT DEBUG] No zone found");
+                    UnityEngine.Debug.Log("[CHECKOUT UnityEngine.Debug] No zone found");
                 }
             }
             else
             {
-                Debug.Log("[CHECKOUT DEBUG] Raycast hit nothing");
+                UnityEngine.Debug.Log("[CHECKOUT UnityEngine.Debug] Raycast hit nothing");
             }
         }
 #endregion
 
-#region Debugging
+#region UnityEngine.Debugging
         private void OnGUI()
         {
             GUILayout.BeginArea(new Rect(10, 10, 300, 200));

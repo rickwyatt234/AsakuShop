@@ -1,6 +1,5 @@
 using System;
 using AsakuShop.Core;
-using log4net.Appender;
 
 namespace AsakuShop.Items
 {
@@ -12,6 +11,7 @@ namespace AsakuShop.Items
     // ItemInstance objects, each independently graded and priced.
     public class ItemInstance
     {
+        public ItemInstance Instance { get; set; }
         // Unique identifier assigned at construction via
         // Guid.NewGuid(). Used as the primary key for save/load
         // identity — never changes after creation.

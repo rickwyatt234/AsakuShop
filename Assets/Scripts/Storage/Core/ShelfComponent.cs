@@ -26,7 +26,7 @@ namespace AsakuShop.Storage
         public Vector3 RotationOffset => rotationOffset;
         private Dictionary<ItemInstance, int> itemToSlotIndex = new();
 
-        public StorageType StorageType => storageType;
+        public StorageType[] StorageType => new StorageType[] { storageType };
         public Vector3 GetStockingRotation() => stockingRotation;
         public Vector3 GetStockingOffset() => stockingOffset;
         public float GetBrowsingDistance() => browsingDistance;  // NEW: Getter for browsing offset

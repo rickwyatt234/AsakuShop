@@ -13,7 +13,7 @@ namespace AsakuShop.Input
         public bool run => inputActions.Player.Sprint.IsPressed();
         public bool crouch => inputActions.Player.Crouch.IsPressed();
         public bool interact => inputActions.Player.Interact.IsPressed();
-        public bool itemExamine => inputActions.Player.ItemExamine.IsPressed();
+        public bool examine => inputActions.Player.ItemExamine.IsPressed();
         public Vector2 rotateInput => inputActions.Player.RotateItem.ReadValue<Vector2>();
 
         public float rotatePreviewVertical => inputActions.Player.RotatePreviewVertical.ReadValue<float>();
@@ -23,7 +23,7 @@ namespace AsakuShop.Input
         public bool IsGamepadActive => Gamepad.current != null;
 
         public string GetInteractKeyName() => GetActionKeyName(inputActions.Player.Interact);
-        public string GetItemExamineKeyName() => GetActionKeyName(inputActions.Player.ItemExamine);
+        public string GetExamineKeyName() => GetActionKeyName(inputActions.Player.ItemExamine);
         public string GetRotatePreviewKeyName() => GetRotateKeyName();
         public string GetRotatePreviewModifierKeyName() => GetActionKeyName(inputActions.Player.RotatePreviewModifier);
 

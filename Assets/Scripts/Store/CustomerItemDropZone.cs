@@ -10,20 +10,20 @@ namespace AsakuShop.Store
 
         private void OnTriggerEnter(Collider other)
         {
-            ItemPickup pickup = other.GetComponent<ItemPickup>();
+            ItemInstance pickup = other.GetComponent<ItemInstance>();
             if (pickup != null && !itemsOnCounter.Contains(other.gameObject))
             {
                 itemsOnCounter.Add(other.gameObject);
-                Debug.Log($"[DROP ZONE] {pickup.itemInstance.Definition.DisplayName} placed on counter");
+                Debug.Log($"[DROP ZONE] {pickup.Instance.Definition.DisplayName} placed on counter");
             }
         }
 
         private void OnTriggerExit(Collider other)
         {
-            ItemPickup pickup = other.GetComponent<ItemPickup>();
-            if (pickup != null && itemsOnCounter.Contains(other.gameObject))
+            ItemInstance pickup = other.GetComponent<ItemInstance>();
+            if (pickup != null && itemsOnCounter.Contains(pickup.Instance.gameObject))
             {
-                itemsOnCounter.Remove(other.gameObject);
+                itemsOnCounter.Remove(pickup.Instance.gameObject);
                 Debug.LogWarning("[DROP ZONE] Item fell off counter");
             }
         }

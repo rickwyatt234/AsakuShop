@@ -10,7 +10,7 @@ namespace AsakuShop.Input
         bool run { get; }
         bool crouch { get; }
         bool interact { get; }
-        bool itemExamine { get; }
+        bool examine { get; }
         Vector2 rotateInput { get; }
         float rotatePreviewVertical { get; }
         float rotatePreviewHorizontal { get; }
@@ -19,7 +19,7 @@ namespace AsakuShop.Input
         bool IsGamepadActive { get; }
 
         string GetInteractKeyName();
-        string GetItemExamineKeyName();
+        string GetExamineKeyName();
         string GetRotatePreviewKeyName();
         string GetRotatePreviewModifierKeyName();
         void DisableMovementInput();

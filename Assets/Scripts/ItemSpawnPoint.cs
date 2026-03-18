@@ -31,8 +31,8 @@ public class ItemSpawnPoint : MonoBehaviour
             newObject.name = $"{def.DisplayName}";
             newObject.layer = LayerMask.NameToLayer("Item");
 
-            ItemPickup pickup = newObject.AddComponent<ItemPickup>();
-            pickup.itemInstance = instance;
+            ItemInstance pickup = newObject.AddComponent<ItemInstance>();
+            pickup.Instance = instance;
 
             Rigidbody rb = newObject.AddComponent<Rigidbody>();
             rb.isKinematic = false;
