@@ -2,8 +2,11 @@
     "name": "AsakuShop.Customers",
     "rootNamespace": "AsakuShop.Customers",
     "references": [
+        "GUID:2b2fd5f5c972e124181634fddc89466a",
         "GUID:2d7fb0f8a5e85aa4caebf23ea217944f",
-        "GUID:81f3d0dd861e1024b8d69c5349634a62"
+        "GUID:81f3d0dd861e1024b8d69c5349634a62",
+        "GUID:844a0b3ea1217b24ea6af18f5e3f3361",
+        "GUID:7fd500a2c5f7cae4a8ce833842b3d4ef"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

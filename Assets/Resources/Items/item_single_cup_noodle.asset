@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0b838ad6f3571c742afc7e8b22a2bef9, type: 3}
+  m_Name: item_single_cup_noodle
+  m_EditorClassIdentifier: AsakuShop.Items::AsakuShop.Items.ItemDefinition
+  ItemId: item_single_cup_noodle
+  DisplayName: Single Cup Noodle
+  Description: 'A single serving of ramen in a styrofoam cup. Just add water! '
+  Category: 0
+  StorageType: 0
+  StockingSize: 0
+  WeightKg: 0.1
+  BaseGrade: 0
+  BaseBuyPrice: 100
+  BaseSellPrice: 150
+  DemandFactors: 0
+  IsCrateItem: 1
+  IsCraftingOutput: 0
+  IsCraftingIngredient: 0
+  WorldPrefab: {fileID: 7385360444939377690, guid: b4860accea0e78f44b8c767807c3b51e, type: 3}
+  Icon: {fileID: 0}

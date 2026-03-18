@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0b838ad6f3571c742afc7e8b22a2bef9, type: 3}
+  m_Name: item_ramune_bottle
+  m_EditorClassIdentifier: AsakuShop.Items::AsakuShop.Items.ItemDefinition
+  ItemId: item_ramune_bottle
+  DisplayName: Bottle of Ramune
+  Description: A fun fizzy drink. Push the marble into the bottle with the provided
+    plastic tool. Comes in many flavors!
+  Category: 0
+  StorageType: 0
+  StockingSize: 0
+  WeightKg: 0.2
+  BaseGrade: 0
+  BaseBuyPrice: 450
+  BaseSellPrice: 500
+  DemandFactors: 0
+  IsCrateItem: 1
+  IsCraftingOutput: 0
+  IsCraftingIngredient: 0
+  WorldPrefab: {fileID: 3954722158838055419, guid: f6462649bc3dd684da2c85c22f9b07c2, type: 3}
+  Icon: {fileID: 0}

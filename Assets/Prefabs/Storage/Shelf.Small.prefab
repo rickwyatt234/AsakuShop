@@ -117,8 +117,10 @@ MonoBehaviour:
   stockingOffset: {x: 0, y: 0.35, z: 0}
   mountOffsetDistance: 0.5
   slotStartOffset: {x: -0.45, y: 0.8, z: 0}
+  shelfID: Shelf001
   shelfName: Shelf
   rotationOffset: {x: -90, y: -90, z: 0}
+  browsingDistance: 0.5
 --- !u!114 &143004073692136189
 MonoBehaviour:
   m_ObjectHideFlags: 0

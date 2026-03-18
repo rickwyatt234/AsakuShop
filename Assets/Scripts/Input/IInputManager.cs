@@ -22,5 +22,7 @@ namespace AsakuShop.Input
         string GetItemExamineKeyName();
         string GetRotatePreviewKeyName();
         string GetRotatePreviewModifierKeyName();
+        void DisableMovementInput();
+        void EnableMovementInput();
     }
 }

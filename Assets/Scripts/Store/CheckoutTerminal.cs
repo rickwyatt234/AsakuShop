@@ -37,6 +37,9 @@ namespace AsakuShop.Store
             OnItemScanned?.Invoke(item, runningTotal);
             display?.UpdateDisplay(scannedItems, runningTotal);
 
+            // Fire the event so customers know this item was scanned
+            CheckoutEvents.FireItemScanned(item);
+
             Debug.Log($"[CHECKOUT] Scanned: {item.Definition.DisplayName} = ¥{itemPrice} | Total: ¥{runningTotal}");
             return true;
         }

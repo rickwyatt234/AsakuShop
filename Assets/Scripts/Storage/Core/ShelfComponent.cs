@@ -20,6 +20,7 @@ namespace AsakuShop.Storage
         [SerializeField] private string shelfID = "Shelf001";
         public string shelfName = "Shelf";
         [SerializeField] private Vector3 rotationOffset = Vector3.zero;
+        [SerializeField] private float browsingDistance = 1.5f;  // NEW: How far in front of shelf customer stands
 
         private List<ItemInstance> items = new();
         public Vector3 RotationOffset => rotationOffset;
@@ -28,6 +29,7 @@ namespace AsakuShop.Storage
         public StorageType StorageType => storageType;
         public Vector3 GetStockingRotation() => stockingRotation;
         public Vector3 GetStockingOffset() => stockingOffset;
+        public float GetBrowsingDistance() => browsingDistance;  // NEW: Getter for browsing offset
 
         public bool CanAddItem(ItemInstance item)
         {
@@ -48,13 +50,11 @@ namespace AsakuShop.Storage
 
             items.Add(item);
             
-            // Find the first available slot instead of just using list count
             int maxSlots = slotColumns * slotRows;
             int availableSlot = 0;
             
             for (int i = 0; i < maxSlots; i++)
             {
-                // Check if this slot is already occupied
                 bool slotOccupied = false;
                 foreach (var kvp in itemToSlotIndex)
                 {

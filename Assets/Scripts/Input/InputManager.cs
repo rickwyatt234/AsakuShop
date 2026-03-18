@@ -117,5 +117,14 @@ namespace AsakuShop.Input
         {
             inputActions.Disable();
         }
+        
+        public void DisableMovementInput()
+        {
+            inputActions.Player.Move.Disable();
+        }
+        public void EnableMovementInput()
+        {
+            inputActions.Player.Move.Enable();
+        }
     }
 }
