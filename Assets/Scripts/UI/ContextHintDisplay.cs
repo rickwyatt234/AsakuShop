@@ -36,31 +36,52 @@ namespace AsakuShop.UI
             HideContext();
         }
 
-        public string GetContext(IInteractable interactable)
+        public string GetHoverContext(IInteractable interactable)
+        {
+            string interactKey = input.GetInteractKeyName();
+            string examineKey = input.GetExamineKeyName();
+            // switch statement based on interactable type or tags to return appropriate context hints
+            switch (interactable)
+            {
+                case ItemInstance itemInstance:
+                    return $"[{interactKey}]: Pick up";
+                case StorageContainer storageContainer:
+                    return $"[{interactKey}]: Pick up\n" +
+                           $"[{examineKey}]: Open";
+                case ShelfComponent shelfComponent:
+                    if (ShelfIsMounted)
+                        return $"[{examineKey}]: Pick up";
+                    else
+                        return $"[{interactKey}]: Pick up";
+                default:
+                    return "";
+            }
+        }
+
+        public string GetHeldItemContext(IInteractable interactable)
         {
             string interactKey = input.GetInteractKeyName();
             string examineKey = input.GetExamineKeyName();
             string rotateKey = input.GetRotatePreviewKeyName();
             string rotateModifierKey = input.GetRotatePreviewModifierKeyName();
-            // switch statement based on interactable type or tags to return appropriate context hints
+
             switch (interactable)
             {
                 case ItemInstance itemInstance:
-                    return $"[{interactKey}]: pick up {itemInstance.Definition.DisplayName}\n" +
-                           $"[{examineKey}]: examine";
+                    return $"[{interactKey}]: Drop\n" +
+                           $"[{examineKey}]: Examine\n" +
+                           $"[{rotateKey}]: Rotate Vertically\n" +
+                           $"[{rotateModifierKey}] + [{rotateKey}]: Rotate Horizontally";
                 case StorageContainer storageContainer:
-                    return $"[{interactKey}]: open {storageContainer.containerName}\n" +
-                           $"[{examineKey}]: examine";
+                    return $"[{interactKey}]: Drop\n" +
+                           $"[{rotateKey}]: Rotate Vertically\n" +
+                           $"[{rotateModifierKey}] + [{rotateKey}]: Rotate Horizontally";
                 case ShelfComponent shelfComponent:
-                    return $"[{interactKey}]: interact with shelf\n" +
-                           $"[{examineKey}]: examine\n" +
-                           $"Hold [{rotateModifierKey}] + Move mouse to rotate preview";
-                default:
-                    return $"[{interactKey}]: interact\n" +
-                           $"[{examineKey}]: examine";
+                    if (LookingAtSuitableMountingPosition)
+                        return $"[{interactKey}]: Mount Shelf\n";
+                    else
+                        return $"[{interactKey}]: Drop";
             }
-        }
-
         public void SetContext(string hint)
         {
             if (string.IsNullOrEmpty(hint))
