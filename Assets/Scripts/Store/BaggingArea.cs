@@ -14,11 +14,11 @@ namespace AsakuShop.Store
                 CustomerItemDropZone dropZone = GetComponentInParent<CustomerItemDropZone>();
                 if (dropZone != null)
                 {
-                    dropZone.RemoveItemFromCounter(other.gameObject);
+                    dropZone.RemoveItemFromCounter(pickup.Instance.gameObject);
                 }
 
                 Debug.Log($"[BAGGING] {pickup.Instance.Definition.DisplayName} bagged and removed");
-                Destroy(other.gameObject);
+                Destroy(pickup.Instance.gameObject);
             }
         }
     }

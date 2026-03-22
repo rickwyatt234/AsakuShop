@@ -1,4 +1,5 @@
 using AsakuShop.Core;
+using AsakuShop.Player;
 using AsakuShop.UI;
 using UnityEngine;
 using UnityEngine.UI;
@@ -27,6 +28,7 @@ namespace AsakuShop.Input
 
                 [HideInInspector] public CharacterController characterController;
                 [HideInInspector] public IInputManager input;
+                [HideInInspector] public PlayerHands player;
                 [HideInInspector] public Vector3 moveDirection;
                 [HideInInspector] public bool isGrounded;
             
@@ -105,6 +107,7 @@ namespace AsakuShop.Input
                 standingCharacterControllerCenter = characterController.center;
 
                 input = GetComponent<IInputManager>();
+                player = FindFirstObjectByType<PlayerHands>();
 
                 stateFactory = new PlayerStateFactory(this);
             }
@@ -208,6 +211,9 @@ namespace AsakuShop.Input
     // Detect interactables in front of the player and handle Context Hint UI
     private void DetectInteractable()
         {
+            if (player.IsHoldingInteractable)
+                return;
+
             //Create Raycast from center of screen to detect interactables
             Ray ray = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
 
@@ -220,6 +226,8 @@ namespace AsakuShop.Input
                     //If we hit an interactable, show the context hint
                     if (lastInteractable != interactable)
                     {
+                        //if player is holding something, don't show a context hint for 
+                        //interactables the player is looking at.
                         lastInteractable = interactable;
                         ContextHintDisplay.Instance.SetContext(ContextHintDisplay.Instance.GetContext(interactable));
                     }
@@ -239,9 +247,18 @@ namespace AsakuShop.Input
                 else
                 {
                     //If we are looking at something that is not interactable, hide the context hint
+                    if (player.IsHoldingInteractable || lastInteractable != null)
+                    {
+                        
+                    }
                     lastInteractable = null;
                     ContextHintDisplay.Instance.HideContext();
                 }       
+            }
+            else
+            {
+                lastInteractable = null;
+                ContextHintDisplay.Instance.HideContext();
             } 
         }
     #endregion

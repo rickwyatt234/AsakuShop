@@ -1,8 +1,8 @@
 namespace AsakuShop.Items
 {
-    // Describes where an item must be stored to remain in good condition. Determines which physical 
-    // storage fixtures can hold this item and whether the overnight spoilage pass applies.
-    public enum StorageType
+    // Enum representing preferred storage type for storage containers
+    // containers can hold all types of items, but this indicates the ideal storage conditions for items placed inside
+    public enum PreferredStorageType
     {
         // Shelf-stable item stored at room temperature. No special storage
         // fixture required and no passive quality decay from temperature.
@@ -15,7 +15,5 @@ namespace AsakuShop.Items
         // Requires a freezer. Covers frozen meals, ice cream, and any item
         // that must remain frozen to maintain grade.
         Frozen,
-
-        FreeForm // For storage containers that can hold multiple types of items, like shelves and cabinets
     }
 }

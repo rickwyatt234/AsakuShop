@@ -26,61 +26,86 @@ namespace AsakuShop.Items
         // overnight decay or other game events.
         public ItemGrade CurrentGrade { get; set; }
 
-        // The price actually paid for this specific instance in yen. May differ
-        // from ItemDefinition.BaseBuyPrice due to market
-        // fluctuations, crate-rolling, or negotiation.
-        public float PurchasePrice { get; set; }
+        // The price paid to acquire this item instance. Starts at
+        // ItemDefinition.BasePrice and may be modified by game events.
+        public float CurrentPrice { get; set; }
 
-        // The in-game moment when this instance was created or purchased.
-        // Used for age calculations and spoilage tracking.
-        public GameTime AcquiredTime { get; }
+        public bool IsOnAShelf { get; set; } = false;
 
-        // Creates a new instance using the definition's base grade and base buy price as starting values.
-        public ItemInstance(ItemDefinition definition, GameTime acquiredTime)
+        public bool IsInOptimalStorageConditions
+        {
+            get
+            {
+                // For now, just return true for all items since I haven't implemented storage conditions yet.
+                // In the future, this will check the current storage environment against the item's PreferredStorageType.
+                return true;
+            }
+        }
+
+        // Creates a new instance with default grade and price based on the provided ItemDefinition.
+        public ItemInstance(ItemDefinition definition)
         {
             Definition    = definition ?? throw new ArgumentNullException(nameof(definition));
             CurrentGrade  = definition.BaseGrade;
-            PurchasePrice = definition.BaseBuyPrice;
-            AcquiredTime  = acquiredTime;
+            CurrentPrice = definition.BasePrice;
             InstanceId    = Guid.NewGuid().ToString();
         }
 
-        // Creates a new instance with an explicitly supplied grade and purchase price.
-        // Use this constructor when the grade has been rolled (e.g. for a crate purchase)
-        // or when restoring from a save snapshot.
-        public ItemInstance(ItemDefinition definition, ItemGrade grade, float purchasePrice, GameTime acquiredTime)
+        // Creates a new instance with an explicitly supplied grade. 
+        // Crafting outputs and buying crates of items will use this constructor to set the 
+        // grade based on recipe results or crate purchase rolls.
+        public ItemInstance(ItemDefinition definition, ItemGrade grade)
         {
             Definition    = definition ?? throw new ArgumentNullException(nameof(definition));
             CurrentGrade  = grade;
-            PurchasePrice = purchasePrice;
-            AcquiredTime  = acquiredTime;
+            CurrentPrice = definition.BasePrice;
             InstanceId    = Guid.NewGuid().ToString();
         }
 
+        // Creates a new instance with explicitly supplied grade and price.
+        // Used for instantiating items in markets or other special cases
+        public ItemInstance(ItemDefinition definition, ItemGrade grade, float price)
+        {
+            Definition    = definition ?? throw new ArgumentNullException(nameof(definition));
+            CurrentGrade  = grade;
+            CurrentPrice = price;
+            InstanceId    = Guid.NewGuid().ToString();
+        }
+
+
         // Restores an instance from a save snapshot, preserving the original InstanceId. 
         // For internal use by ItemSaveData.Restore only.
-        internal ItemInstance(string instanceId, ItemDefinition definition, ItemGrade grade, float purchasePrice, GameTime acquiredTime)
+        internal ItemInstance(string instanceId, ItemDefinition definition, ItemGrade grade, float currentPrice)
         {
             InstanceId    = instanceId ?? Guid.NewGuid().ToString();
             Definition    = definition ?? throw new ArgumentNullException(nameof(definition));
             CurrentGrade  = grade;
-            PurchasePrice = purchasePrice;
-            AcquiredTime  = acquiredTime;
+            CurrentPrice = currentPrice;
         }
 
         // Applies one step of overnight quality decay, lowering CurrentGrade by one tier. 
         // Grade will not fall below ItemGrade.F. Called once per overnight pass for all perishable items.
         public void ApplyOvernightDecay()
         {
-            CurrentGrade = CurrentGrade.Decay();
+            if (Definition.IsPerishable && IsInOptimalStorageConditions)
+            {
+                //DO LOGIC LATER
+                CurrentGrade = CurrentGrade.Decay();
+            }
+            else if (Definition.IsPerishable && !IsInOptimalStorageConditions)
+            {
+                CurrentGrade = CurrentGrade.Decay();
+            }
         }
 
-        // Returns a human-readable summary, e.g. [Salmon Onigiri | Grade: A | ¥180]"
+        // Returns a human-readable summary, e.g. [Salmon Onigiri | Grade: A | Price: ¥180]"
         public override string ToString()
         {
             string name  = Definition != null ? Definition.DisplayName : "Unknown";
             string grade = CurrentGrade.ToDisplayString();
-            return $"[{name} | Grade: {grade} | ¥{PurchasePrice}]";
+            return $"[{name} | Grade: {grade} | Price: ¥{CurrentPrice}]";
         }
+
+        
     }
 }

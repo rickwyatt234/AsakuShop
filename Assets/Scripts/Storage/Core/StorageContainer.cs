@@ -1,80 +1,88 @@
 using UnityEngine;
 using AsakuShop.Items;
-using System.Collections.Generic;
+using AsakuShop.Core;
+using AsakuShop.Player;
+using AsakuShop.UI;
 
 namespace AsakuShop.Storage
 {
-    public class StorageContainer : MonoBehaviour, IStorageUnit
+    public class StorageContainer : MonoBehaviour, IInteractable
     {
-        [SerializeField] private StorageType storageType = StorageType.Dry;
-        [SerializeField] private Vector2 inventorySize = new Vector2(500, 400); // UI window size
+        // Unique identifier for this container (could be used for saving/loading)
         [SerializeField] private string containerID = "Container001";
         public string containerName = "Container";
-        [SerializeField] private float maxWeightCapacity = 50f; // max weight in kg
 
+
+        // Preferred Storage Type for food spoilage purposes (e.g. Dry, Refrigerated, Frozen)
+        [SerializeField] private PreferredStorageType storageType = PreferredStorageType.Dry;
+        public PreferredStorageType StorageType => storageType;
+
+
+        // The actual inventory data for this container
         private StorageInventory inventory;
-
-        public StorageType StorageType => storageType;
-        public StorageInventory Inventory => inventory;
+        [SerializeField] private Vector2 inventorySize = new Vector2(500, 400); // UI window size
         public Vector2 InventorySize => inventorySize;
+        [SerializeField] private float maxWeightCapacity = 50f; // max weight in kg
         public float MaxWeightCapacity => maxWeightCapacity;
 
+
+        // Offset and rotation for when the container is held by the player
+        public Vector3 heldOffset = new Vector3(0, -0.5f, 1f);
+        public Quaternion heldRotation = Quaternion.Euler(0, 180, 0);
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#region Unity Lifecycle
         private void Awake()
         {
+            // Initialize inventory with specified size
             inventory = new StorageInventory(inventorySize);
+            playerHands = FindFirstObjectByType<PlayerHands>();
         }
+#endregion
 
-        public bool CanAddItem(ItemInstance item)
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#region IInteractable Implementation
+
+// Reference to PlayerHands for pickup logic
+private PlayerHands playerHands;
+
+        public void OnInteract()
         {
-            return item != null && item.Definition.StorageType == storageType;
-        }
-
-        public bool TryAddItem(ItemInstance item)
-        {
-            if (!CanAddItem(item))
-                return false;
-
-            return inventory.TryAddItem(item);
-        }
-
-        public bool TryRemoveItem(ItemInstance item)
-        {
-            StorageItemEntry entry = inventory.GetEntryByInstance(item);
-            return inventory.TryRemoveItem(entry);
-        }
-
-        public List<ItemInstance> GetAllItems()
-        {
-            List<ItemInstance> items = new();
-            foreach (var entry in inventory.GetAllItems())
+            if (playerHands != null)
             {
-                if (entry.itemInstance != null)
-                    items.Add(entry.itemInstance);
+              if (!playerHands.IsHoldingInteractable)
+                {
+                  //pick up container
+                    playerHands.heldContainer = this;
+                    playerHands.TryPickupInteractable(playerHands.heldContainer.gameObject);  
+                }
+              else
+                {
+                    Debug.Log("[STORAGE CONTAINER] Player is holding something, cannot pickup container");
+                }
             }
-            return items;
-        }
-
-        public int GetCapacity() => int.MaxValue; // No fixed capacity, but could be limited
-        public int GetCurrentCount() => inventory.Count;
-
-        public float GetCurrentWeight()
-        {
-            float totalWeight = 0f;
-            foreach (var entry in inventory.GetAllItems())
+            else
             {
-                if (entry.itemInstance?.Definition != null)
-                    totalWeight += entry.itemInstance.Definition.WeightKg;
+                Debug.LogWarning("PlayerHands reference is missing in StorageContainer");
             }
-            return totalWeight;
         }
+        public void OnExamine()
+        {
+            OpenInventory();
+        }
+#endregion
 
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#region Public Methods for Storage Container Functionality
         // Open the inventory UI for this container
         public void OpenInventory()
         {
             if (StorageInventoryUI.Instance != null)
                 StorageInventoryUI.Instance.OpenContainer(this);
-            else
-                Debug.LogError("StorageInventoryUI Instance not found!");
         }
     }
-}
+#endregion
+}   

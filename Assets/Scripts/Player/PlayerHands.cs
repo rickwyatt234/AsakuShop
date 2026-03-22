@@ -10,11 +10,20 @@ using AsakuShop.UI;
 
 namespace AsakuShop.Player
 {
-    public class PlayerHands : MonoBehaviour, ICheckoutPlayer
+    public class PlayerHands : MonoBehaviour
     {
 #region Fields
         public Transform playerCamera;
+
+        // These fields track what the player is currently holding in their hands. Only one of these should be non-null at a time.
+        // Or none at all if the player is empty-handed. These are set when picking up items/shelves/containers and cleared when placing them.
+        // SET BY ITEMINSTANCE.CS, SHELFCOMPONENT.CS, STORAGECONTAINER.CS IN ONINTERACT() METHODS
         public ItemInstance heldItem;
+        public StorageContainer heldContainer;
+        public ShelfComponent heldShelf;
+        public bool IsHoldingInteractable => heldItem != null || heldContainer != null || heldShelf != null;
+
+
         private bool previousInteractState = false;
         private bool previousExamineState = false;
         private Vector3 previewRotation = Vector3.zero;
@@ -24,11 +33,7 @@ namespace AsakuShop.Player
         [HideInInspector] public Transform heldItemVisualTransform;
         [HideInInspector] public Vector3 placementPreviewPosition;
         [HideInInspector] public GameObject placementPreviewVisual;
-        [HideInInspector] public bool validPlacement;
-
-        private Transform checkoutPositionTarget;
-        private bool movementLocked = false;
-        private CheckoutZone activeCheckoutZone;
+        [HideInInspector] public bool validPlacement;   
 #endregion
 
 #region Unity Methods
@@ -36,24 +41,10 @@ namespace AsakuShop.Player
         {
             playerCamera = Camera.main.transform;
             input = GetComponent<IInputManager>();
-            UnityEngine.Debug.Log("[PLAYER] PlayerHands initialized");
         }
 
         private void Update()
         {
-            if (UnityEngine.Input.GetKeyDown(KeyCode.Escape) && activeCheckoutZone != null && activeCheckoutZone.IsPlayerCheckingOut())
-            {
-                UnityEngine.Debug.Log("[CHECKOUT UnityEngine.Debug] ESC pressed, ending checkout");
-                activeCheckoutZone.TryEndCheckout();
-                activeCheckoutZone = null;
-            }
-
-            if (movementLocked)
-            {
-                input.DisableMovementInput();
-            }
-
-            HandleInteraction();
             HandleExaminationOrStorage();
             HandlePlacementPreview();
             HandlePreviewRotation();
@@ -71,178 +62,6 @@ namespace AsakuShop.Player
 #endregion
 
 #region Interaction
-        private void HandleInteraction()
-        {
-            if (GameStateController.Instance.CurrentPhase != GamePhase.Playing)
-                return;
-
-            if (InventoryState.IsOpen)
-                return;
-
-            bool currentInteractState = input.interact;
-            bool interactPressed = currentInteractState && !previousInteractState;
-            previousInteractState = currentInteractState;
-
-            if (interactPressed)
-            {
-                bool holdingItem = heldItem != null;
-                bool holdingContainer = heldItemVisual != null && heldItemVisual.GetComponent<StorageContainer>() != null;
-                bool holdingShelf = heldItemVisual != null && heldItemVisual.GetComponent<ShelfComponent>() != null;
-
-                // Try to start checkout if not already checking out
-                if (activeCheckoutZone == null || !activeCheckoutZone.IsPlayerCheckingOut())
-                {
-                    UnityEngine.Debug.Log("[CHECKOUT UnityEngine.Debug] Trying to start checkout...");
-                    TryStartCheckout();
-                }
-
-                // If checking out, try to scan items
-                if (activeCheckoutZone != null && activeCheckoutZone.IsPlayerCheckingOut())
-                {
-                    UnityEngine.Debug.Log("[CHECKOUT UnityEngine.Debug] Already at checkout, trying to scan item");
-                    TryScanItemAtTerminal(activeCheckoutZone.GetTerminal());
-                }
-
-                // Normal item interactions (only if not at checkout)
-                if (activeCheckoutZone == null || !activeCheckoutZone.IsPlayerCheckingOut())
-                {
-                    if (!holdingItem && !holdingContainer && !holdingShelf)
-                    {
-                        TryPickupItem();
-                    }
-                    else if (holdingItem)
-                    {
-                        Ray ray = new Ray(playerCamera.position, playerCamera.forward);
-                        if (Physics.Raycast(ray, out RaycastHit hit, 3f))
-                        {
-                            ShelfComponent shelf = hit.collider.GetComponent<ShelfComponent>();
-                            if (shelf != null && shelf.CanAddItem(heldItem))
-                            {
-                                TryStockItemOnShelf(shelf);
-                                return;
-                            }
-                        }
-                        TryPlaceItem();
-                    }
-                    else
-                    {
-                        TryPlaceItem();
-                    }
-                }
-            }
-
-            UpdateContextHint();
-        }
-
-        private void UpdateContextHint()
-        {
-            if (InventoryState.IsOpen)
-            {
-                ContextHintDisplay.Instance?.HideContext();
-                return;
-            }
-
-            Ray ray = new Ray(playerCamera.position, playerCamera.forward);
-            string contextHint = "";
-            bool hitSomething = false;
-            bool foundStorageUnit = false;
-
-            string interactKey = input.GetInteractKeyName();
-            string examineKey = input.GetExamineKeyName();
-            string rotateKey = input.GetRotatePreviewKeyName();
-            string rotateModifierKey = input.GetRotatePreviewModifierKeyName();
-
-            string rotationHint;
-            if (input.IsGamepadActive)
-            {
-                rotationHint = $"[{rotateModifierKey} + {rotateKey}] Rotate Horizontally\n[{rotateKey}] Rotate Vertically";
-            }
-            else
-            {
-                rotationHint = $"[{rotateKey}] Rotate Vertically\n[{rotateModifierKey} + {rotateKey}] Rotate Horizontally";
-            }
-
-            if (heldItem != null || heldItemVisual != null)
-            {
-                contextHint = $"[{interactKey}] Place\n{rotationHint}";
-            }
-
-            if (Physics.Raycast(ray, out RaycastHit hit, 3f))
-            {
-                StorageContainer container = hit.collider.GetComponent<StorageContainer>();
-                if (container != null)
-                {
-                    foundStorageUnit = true;
-                    hitSomething = true;
-                    ItemHoverDisplay.Instance?.ShowLabelForContainer(container.containerName);
-
-                    if (heldItem != null)
-                        contextHint = $"[{interactKey}] Drop\n[{examineKey}] Store Item";
-                    else if (heldItemVisual != null)
-                        contextHint = $"[{interactKey}] Place\n{rotationHint}";
-                    else
-                        contextHint = $"[{interactKey}] Pick Up\n[{examineKey}] Open";
-                }
-                else
-                {
-                    ShelfComponent shelf = hit.collider.GetComponent<ShelfComponent>();
-                    if (shelf != null)
-                    {
-                        foundStorageUnit = true;
-                        hitSomething = true;
-                        ItemHoverDisplay.Instance?.ShowLabelForContainer(shelf.shelfName);
-
-                        bool isWallMounted = IsShelfWallMounted(shelf);
-
-                        if (heldItem != null)
-                        {
-                            if (shelf.CanAddItem(heldItem))
-                                contextHint = $"[{interactKey}] Stock";
-                            else
-                                contextHint = $"[{interactKey}] Drop";
-                        }
-                        else if (heldItemVisual != null)
-                            contextHint = $"[{interactKey}] Place\n{rotationHint}";
-                        else if (isWallMounted)
-                            contextHint = $"[{examineKey}] Pick Up";
-                        else
-                            contextHint = $"[{interactKey}] Pick Up";
-                    }
-                    else
-                    {
-                        ItemPickup pickup = hit.collider.GetComponent<ItemPickup>();
-                        if (pickup != null && pickup.itemInstance != null)
-                        {
-                            hitSomething = true;
-
-                            if (heldItem != null)
-                                contextHint = $"[{interactKey}] Drop\n[{examineKey}] Examine Held";
-                            else if (heldItemVisual != null)
-                                contextHint = $"[{interactKey}] Place\n{rotationHint}";
-                            else
-                                contextHint = $"[{interactKey}] Pick Up";
-                        }
-                    }
-                }
-            }
-
-            if (!foundStorageUnit)
-            {
-                ItemHoverDisplay.Instance?.ResetDisplay();
-            }
-
-            if (!hitSomething && heldItem != null)
-                contextHint = $"[{interactKey}] Place\n{rotationHint}\n[{examineKey}] Examine Held";
-
-            if (ContextHintDisplay.Instance != null)
-            {
-                if (string.IsNullOrEmpty(contextHint))
-                    ContextHintDisplay.Instance.HideContext();
-                else
-                    ContextHintDisplay.Instance.SetContext(contextHint);
-            }
-        }
-
         private void HandleExaminationOrStorage()
         {
             if (GameStateController.Instance.CurrentPhase != GamePhase.Playing)
@@ -254,45 +73,13 @@ namespace AsakuShop.Player
             bool examinePressed = currentExamineState && !previousExamineState;
             previousExamineState = currentExamineState;
 
-            if (examinePressed)
+            if (heldItem != null)
             {
-                Ray ray = new Ray(playerCamera.position, playerCamera.forward);
-                RaycastHit[] hits = Physics.RaycastAll(ray, 3f, -1, QueryTriggerInteraction.Collide);
-
-                foreach (RaycastHit hit in hits)
-                {
-                    if (hit.collider.CompareTag("Player") || hit.transform.root.gameObject == gameObject)
-                        continue;
-
-                    ShelfComponent wallShelf = hit.collider.GetComponent<ShelfComponent>();
-                    if (wallShelf != null && IsShelfWallMounted(wallShelf))
-                    {
-                        PickupShelf(wallShelf);
-                        return;
-                    }
-
-                    StorageContainer container = hit.collider.GetComponent<StorageContainer>();
-                    if (container != null)
-                    {
-                        if (heldItem != null)
-                        {
-                            UnityEngine.Debug.Log($"Tried to store {heldItem.Definition.DisplayName} in {container.name}");
-                            TryStoreItem(container);
-                            return;
-                        }
-
-                        container.OpenInventory();
-                        return;
-                    }
-                }
-
-                if (heldItem != null)
-                {
-                    ItemExaminer.Instance.StartExamination(heldItem);
-                }
+                ItemExaminer.Instance.StartExamination(heldItem);
             }
+            // Maybe examine logic for containers and shelves later
         }
-
+    
         private void HandlePhaseChanged(GamePhase previousPhase, GamePhase newPhase)
         {
             if (newPhase == GamePhase.ItemExamination)
@@ -316,63 +103,57 @@ namespace AsakuShop.Player
 #endregion
 
 #region Item Pickup and Placement
-        private void TryPickupItem()
+        public void TryPickupInteractable(GameObject interactableObject)
         {
             if (InventoryState.IsOpen)
                 return;
+            if (GameStateController.Instance.CurrentPhase != GamePhase.Playing)
+                return;
 
-            Ray ray = new Ray(playerCamera.position, playerCamera.forward);
-            if (Physics.Raycast(ray, out RaycastHit hit, 3f))
+            if (heldItem != null)
             {
-                if (input.examine)
+                
+            }
+            else if (heldContainer != null)
+            {
+                //Held Item Visual
+                heldItemVisual = heldContainer.gameObject;
+                heldItemVisualTransform = heldItemVisual.transform;
+                heldItemVisualTransform.SetParent(playerCamera);
+                heldItemVisualTransform.localPosition = heldContainer.heldOffset;
+                heldItemVisualTransform.localRotation = heldContainer.heldRotation;
+
+                //Component and collider adjustments
+                Rigidbody rb = heldContainer.GetComponent<Rigidbody>();
+                if (rb != null)
                 {
-                    IInteractable interactable = hit.collider.GetComponent<IInteractable>();
-                    if (interactable != null)
-                    {
-                        interactable.OnInteract();
-                        return;
-                    }
+                    rb.isKinematic = true;
                 }
-
-                StorageContainer storageContainer = hit.collider.GetComponent<StorageContainer>();
-                if (storageContainer != null)
+                foreach (Collider col in heldContainer.GetComponentsInChildren<Collider>())                
                 {
-                    PickupStorageContainer(storageContainer);
-                    return;
+                    col.enabled = false;
                 }
+                Debug.Log($"Picked up storage container: {heldContainer.containerName}");
+            }
+            else if (heldShelf != null)
+            {
+                //Held Item Visual
+                heldItemVisual = heldShelf.gameObject;
+                heldItemVisualTransform = heldItemVisual.transform;
+                heldItemVisualTransform.SetParent(playerCamera);
+                heldItemVisualTransform.localPosition = heldShelf.heldOffset;
+                heldItemVisualTransform.localRotation = heldShelf.heldRotation;
+            }
+            else
+            {
+                Debug.Log("[PLAYER] Cannot pickup - no interactable object provided");
+            }
 
-                ShelfComponent shelf = hit.collider.GetComponent<ShelfComponent>();
-                if (shelf != null)
-                {
-                    if (!IsShelfWallMounted(shelf))
-                    {
-                        PickupShelf(shelf);
-                        return;
-                    }
-                }
 
-                ItemPickup pickup = hit.collider.GetComponent<ItemPickup>();
-                if (pickup != null && pickup.itemInstance != null)
-                {
-                    heldItem = pickup.itemInstance;
+        }
 
-                    // If this item was on a shelf, remove it from the shelf
-                    ShelfComponent[] allShelves = FindObjectsByType<ShelfComponent>(FindObjectsSortMode.None);
-                    foreach (ShelfComponent shelfComponent in allShelves)
-                    {
-                        if (shelfComponent.GetAllItems().Contains(pickup.itemInstance))
-                        {
-                            shelfComponent.TryRemoveItem(pickup.itemInstance);
-                            break;
-                        }
-                    }
 
                     // Pick up the actual item GameObject (like we do with shelves/containers)
-                    heldItemVisual = pickup.gameObject;
-                    heldItemVisualTransform = heldItemVisual.transform;
-                    heldItemVisualTransform.SetParent(playerCamera);
-                    heldItemVisualTransform.localPosition = new Vector3(0.5f, -0.5f, 1f);
-                    heldItemVisualTransform.localRotation = Quaternion.Euler(0, 90f, 0);
 
                     // Disable physics while carrying
                     Rigidbody itemRb = heldItemVisual.GetComponent<Rigidbody>();
@@ -392,68 +173,6 @@ namespace AsakuShop.Player
             }
         }
 
-        private void PickupStorageContainer(StorageContainer container)
-        {
-            if (InventoryState.IsOpen)
-                return;
-
-            heldItemVisual = container.gameObject;
-            heldItemVisualTransform = heldItemVisual.transform;
-            heldItemVisualTransform.SetParent(playerCamera);
-            heldItemVisualTransform.localPosition = new Vector3(1f, -1f, 1f);
-            heldItemVisualTransform.localRotation = Quaternion.Euler(0, 90f, 0);
-
-            Rigidbody rb = container.GetComponent<Rigidbody>();
-            if (rb != null)
-                rb.isKinematic = true;
-
-            foreach (Collider col in container.GetComponentsInChildren<Collider>())
-            {
-                col.enabled = false;
-            }
-            UnityEngine.Debug.Log($"Picked up storage container: {container.name}");
-        }
-
-        private void PickupShelf(ShelfComponent shelf)
-        {
-            if (InventoryState.IsOpen)
-                return;
-
-            List<ItemInstance> stockedItems = shelf.GetAllItems();
-            if (stockedItems.Count > 0)
-            {
-                ItemPickup[] allPickups = FindObjectsByType<ItemPickup>(FindObjectsSortMode.None);
-
-                foreach (ItemInstance item in stockedItems)
-                {
-                    foreach (ItemPickup pickup in allPickups)
-                    {
-                        if (pickup.itemInstance == item)
-                        {
-                            pickup.transform.SetParent(shelf.transform);
-                            break;
-                        }
-                    }
-                }
-            }
-
-            heldItemVisual = shelf.gameObject;
-            heldItemVisualTransform = heldItemVisual.transform;
-            heldItemVisualTransform.SetParent(playerCamera);
-            heldItemVisualTransform.localPosition = new Vector3(1f, -1f, 1f);
-            heldItemVisualTransform.localRotation = Quaternion.Euler(0, 90f, 0);
-
-            Rigidbody rb = shelf.GetComponent<Rigidbody>();
-            if (rb != null)
-                rb.isKinematic = true;
-
-            foreach (Collider col in shelf.GetComponentsInChildren<Collider>())
-            {
-                col.enabled = false;
-            }
-
-            UnityEngine.Debug.Log($"Picked up shelf: {shelf.name}");
-        }
 
         private void TryPlaceItem()
         {

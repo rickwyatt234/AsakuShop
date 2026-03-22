@@ -3,6 +3,7 @@ using AsakuShop.Items;
 using AsakuShop.Input;
 using AsakuShop.Core;
 using TMPro;
+using AsakuShop.Storage;
 
 namespace AsakuShop.UI
 {
@@ -44,7 +45,7 @@ namespace AsakuShop.UI
             input = FindFirstObjectByType<InputManager>();
             if (input == null)
             {
-                UnityEngine.Debug.LogError("[ItemExaminer] Could not find InputManager in scene!");
+                Debug.LogError("[ItemExaminer] Could not find InputManager in scene!");
             }
 
             // Disable canvas by default
@@ -59,7 +60,7 @@ namespace AsakuShop.UI
         {
             if (item == null)
             {
-                UnityEngine.Debug.LogWarning("[ItemExaminer] Cannot examine null item.");
+                Debug.LogWarning("[ItemExaminer] Cannot examine null item.");
                 return;
             }
 
@@ -68,7 +69,7 @@ namespace AsakuShop.UI
                 input = FindFirstObjectByType<InputManager>();
                 if (input == null)
                 {
-                    UnityEngine.Debug.LogError("[ItemExaminer] Could not find InputManager in scene!");
+                    Debug.LogError("[ItemExaminer] Could not find InputManager in scene!");
                     return;
                 }
             }
@@ -143,7 +144,7 @@ namespace AsakuShop.UI
             if (itemInfoText != null)
             {
                 string info = $"Grade: {currentExaminedItem.CurrentGrade.ToDisplayString()}\n"
-                    + $"Price: ¥{currentExaminedItem.PurchasePrice}\n"
+                    + $"Price: ¥{currentExaminedItem.CurrentPrice}\n"
                     + $"Weight: {currentExaminedItem.Definition.WeightKg}kg\n"
                     + $"{currentExaminedItem.Definition.Description}";
                 itemInfoText.text = info;
@@ -209,7 +210,7 @@ namespace AsakuShop.UI
                 examinedItemDisplay.transform.Rotate(Vector3.right, -rotationY, Space.World);
             }
 
-            bool currentExamineState = input.itemExamine;
+            bool currentExamineState = input.examine;
             bool examinePressed = currentExamineState && !previousExamineState;
             previousExamineState = currentExamineState;
             

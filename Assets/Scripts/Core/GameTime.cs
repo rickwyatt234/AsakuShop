@@ -59,5 +59,7 @@ namespace AsakuShop.Core
         {
             return $"{DisplayDayOfWeek} {DisplayTime} (Day {DayIndex})";
         }
+
+
     }
 }

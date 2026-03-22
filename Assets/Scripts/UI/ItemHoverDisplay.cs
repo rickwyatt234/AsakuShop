@@ -12,7 +12,7 @@ namespace AsakuShop.UI
         [SerializeField] private TextMeshProUGUI hoverLabel;
         [SerializeField] private CanvasGroup hoverLabelCanvasGroup;
         [SerializeField] private RectTransform labelRect;
-        private ItemPickup currentHoveredPickup = null;
+        private ItemInstance currentHoveredItem = null;
 
         private bool isShowingStorageLabel = false;
         private void Awake()
@@ -79,29 +79,29 @@ namespace AsakuShop.UI
             Ray ray = new Ray(Camera.main.transform.position, Camera.main.transform.forward);
             RaycastHit[] hits = Physics.RaycastAll(ray, 5f, LayerMask.GetMask("Item"));
 
-            ItemPickup hoveredPickup = null;
+            ItemInstance hoveredItem = null;
 
             if (hits.Length > 0)
             {
                 for (int i = 0; i < hits.Length; i++)
                 {
                     RaycastHit hit = hits[i];
-                    ItemPickup itemPickup = hit.collider.GetComponent<ItemPickup>();
-                    if (itemPickup != null && itemPickup.itemInstance != null)
+                    ItemInstance itemPickup = hit.collider.GetComponent<ItemInstance>();
+                    if (itemPickup != null)
                     {
-                        hoveredPickup = itemPickup;
+                        hoveredItem = itemPickup;
                         break;
                     }
                 }
             }
 
-            if (hoveredPickup != currentHoveredPickup)
+            if (hoveredItem != currentHoveredItem)
             {
-                currentHoveredPickup = hoveredPickup;
+                currentHoveredItem = hoveredItem;
 
-                if (hoveredPickup != null && hoveredPickup.itemInstance != null)
+                if (hoveredItem != null)
                 {
-                    ShowLabel(hoveredPickup.itemInstance);
+                    ShowLabel(hoveredItem);
                 }
                 else
                 {
@@ -127,7 +127,7 @@ namespace AsakuShop.UI
                 isShowingStorageLabel = true;  // Mark that we're showing a storage label
                 hoverLabel.text = $"{itemInstance.Definition.DisplayName}\n"
                     + $"Grade: {itemInstance.CurrentGrade.ToDisplayString()} | "
-                    + $"¥{itemInstance.PurchasePrice} | "
+                    + $"¥{itemInstance.CurrentPrice} | "
                     + $"{itemInstance.Definition.WeightKg}kg";
             }
             else
@@ -170,7 +170,7 @@ namespace AsakuShop.UI
 
         public void ResetDisplay()
         {
-            currentHoveredPickup = null;
+            currentHoveredItem = null;
             isShowingStorageLabel = false;  // Clear flag
 
             if (hoverLabel == null || hoverLabelCanvasGroup == null)

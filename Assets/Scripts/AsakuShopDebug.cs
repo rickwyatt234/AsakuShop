@@ -3,7 +3,7 @@ using AsakuShop.Items;
 
 namespace AsakuShop.Core
 {
-    public class Debug : MonoBehaviour
+    public class AsakuShopDebug : MonoBehaviour
     {
         public Transform spawnPoint;
         public ItemRegistry itemRegistry;
