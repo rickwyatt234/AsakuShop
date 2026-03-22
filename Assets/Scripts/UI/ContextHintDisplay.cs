@@ -5,7 +5,6 @@ using AsakuShop.Input;
 using AsakuShop.Storage;
 using AsakuShop.Player;
 using AsakuShop.Items;
-using NUnit.Framework;
 
 namespace AsakuShop.UI
 {
@@ -39,34 +38,9 @@ namespace AsakuShop.UI
             HideContext();
         }
 
-<<<<<<< Updated upstream
-        public string GetHoverContext(IInteractable interactable)
-        {
-            string interactKey = input.GetInteractKeyName();
-            string examineKey = input.GetExamineKeyName();
-            // switch statement based on interactable type or tags to return appropriate context hints
-            switch (interactable)
-            {
-                case ItemInstance itemInstance:
-                    return $"[{interactKey}]: Pick up";
-                case StorageContainer storageContainer:
-                    return $"[{interactKey}]: Pick up\n" +
-                           $"[{examineKey}]: Open";
-                case ShelfComponent shelfComponent:
-                    if (ShelfIsMounted)
-                        return $"[{examineKey}]: Pick up";
-                    else
-                        return $"[{interactKey}]: Pick up";
-                default:
-                    return "";
-            }
-        }
-
-        public string GetHeldItemContext(IInteractable interactable)
-=======
         private void Update()
         {
-             if (player == null) return;
+            if (player == null) return;
     
             // When holding, always show the held item's context
             if (player.IsHoldingInteractable)
@@ -78,6 +52,7 @@ namespace AsakuShop.UI
                 }
             }
         }
+
         private IInteractable GetHeldInteractable()
         {
             if (player.heldItem != null)
@@ -96,8 +71,8 @@ namespace AsakuShop.UI
                 return player.heldShelf;
             return null;
         }
+
         public string GetContext(IInteractable interactable)
->>>>>>> Stashed changes
         {
             if (player.IsHoldingInteractable)
             {
@@ -108,6 +83,7 @@ namespace AsakuShop.UI
                 return GetHoverContext(interactable);
             }
         }
+
         public string GetHoverContext(IInteractable interactable)
         {
             string interactKey = input.GetInteractKeyName();
@@ -149,13 +125,6 @@ namespace AsakuShop.UI
                            $"[{rotateKey}]: Rotate Vertically\n" +
                            $"[{rotateModifierKey}] + [{rotateKey}]: Rotate Horizontally";
                 case ShelfComponent shelfComponent:
-<<<<<<< Updated upstream
-                    if (LookingAtSuitableMountingPosition)
-                        return $"[{interactKey}]: Mount Shelf\n";
-                    else
-                        return $"[{interactKey}]: Drop";
-            }
-=======
                     if (shelfComponent.IsShelfWallMounted(shelfComponent))
                         return $"[{examineKey}]: Pick up";
                     else
@@ -164,7 +133,7 @@ namespace AsakuShop.UI
                     return "";
             }
         }
->>>>>>> Stashed changes
+
         public void SetContext(string hint)
         {
             if (string.IsNullOrEmpty(hint))
