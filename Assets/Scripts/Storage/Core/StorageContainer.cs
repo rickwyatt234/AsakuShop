@@ -7,43 +7,31 @@ namespace AsakuShop.Storage
 {
     public class StorageContainer : MonoBehaviour, IInteractable, IHoldable
     {
-        // Unique identifier for this container (could be used for saving/loading)
         [SerializeField] private string containerID = "Container001";
         public string DisplayName = "Container";
 
-
-        // Preferred Storage Type for food spoilage purposes (e.g. Dry, Refrigerated, Frozen)
         [SerializeField] private PreferredStorageType storageType = PreferredStorageType.Dry;
         public PreferredStorageType StorageType => storageType;
 
-
-        // The actual inventory data for this container
         private StorageInventory inventory;
-        [SerializeField] private Vector2 inventorySize = new Vector2(500, 400); // UI window size
+        [SerializeField] private Vector2 inventorySize = new Vector2(500, 400);
         public Vector2 InventorySize => inventorySize;
-        [SerializeField] private float maxWeightCapacity = 50f; // max weight in kg
+        [SerializeField] private float maxWeightCapacity = 50f;
         public float MaxWeightCapacity => maxWeightCapacity;
 
+        [SerializeField] private Vector3 heldOffset = new Vector3(0, -0.5f, 1f);
+        [SerializeField] private Quaternion heldRotation = Quaternion.Euler(0, 180, 0);
 
-        // Offset and rotation for when the container is held by the player
-        public Vector3 heldOffset = new Vector3(0, -0.5f, 1f);
-        public Quaternion heldRotation = Quaternion.Euler(0, 180, 0);
-
-#region IHoldable Implementation
+        // IHoldable implementation
         string IHoldable.DisplayName => DisplayName;
         Vector3 IHoldable.HeldOffset => heldOffset;
         Quaternion IHoldable.HeldRotation => heldRotation;
         GameObject IHoldable.GameObject => gameObject;
-#endregion
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #region Unity Lifecycle
         private void Awake()
         {
-            pickupTarget = PlayerService.PickupTarget;
-            if (pickupTarget == null)
-                Debug.LogError("[ItemPickup] No IPickupTarget registered in PlayerService. Make sure PlayerHands is in the scene.");
-            // Initialize inventory with specified size
             inventory = new StorageInventory(inventorySize);
         }
 #endregion
@@ -75,8 +63,7 @@ namespace AsakuShop.Storage
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#region Public Methods for Storage Container Functionality
-        // Open the inventory UI for this container
+#region Public Methods
         public void OpenInventory()
         {
             if (StorageInventoryUI.Instance != null)
@@ -87,6 +74,6 @@ namespace AsakuShop.Storage
         public bool TryRemoveItem(ItemInstance item) => inventory.TryRemoveItem(item);
         public StorageInventory Inventory => inventory;
         public float GetCurrentWeight() => inventory.GetCurrentWeight();
-    }
 #endregion
-}   
+    }
+}
