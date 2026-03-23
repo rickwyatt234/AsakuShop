@@ -207,13 +207,10 @@ namespace AsakuShop.Input
     #endregion
 
 
-    #region Interactable Detection For Context Hints
+    #region Interactable Detection For Context Hints and firing IInteractable methods
     // Detect interactables in front of the player and handle Context Hint UI
     private void DetectInteractable()
         {
-            if (player.IsHoldingInteractable)
-                return;
-
             //Create Raycast from center of screen to detect interactables
             Ray ray = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
 
@@ -246,11 +243,6 @@ namespace AsakuShop.Input
                 }
                 else
                 {
-                    //If we are looking at something that is not interactable, hide the context hint
-                    if (player.IsHoldingInteractable || lastInteractable != null)
-                    {
-                        
-                    }
                     lastInteractable = null;
                     ContextHintDisplay.Instance.HideContext();
                 }       
