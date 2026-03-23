@@ -1,7 +1,6 @@
 using UnityEngine;
 using AsakuShop.Items;
 using AsakuShop.Core;
-using AsakuShop.UI;
 
 namespace AsakuShop.Storage
 {
@@ -66,8 +65,7 @@ namespace AsakuShop.Storage
 #region Public Methods
         public void OpenInventory()
         {
-            if (StorageInventoryUI.Instance != null)
-                StorageInventoryUI.Instance.OpenContainer(this);
+            CoreEvents.RaiseInventoryOpenRequested(this);
         }
 
         public bool TryAddItem(ItemInstance item) => inventory.TryAddItem(item);

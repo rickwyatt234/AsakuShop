@@ -1,6 +1,4 @@
 using AsakuShop.Core;
-using AsakuShop.Player;
-using AsakuShop.UI;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -28,7 +26,6 @@ namespace AsakuShop.Input
 
                 [HideInInspector] public CharacterController characterController;
                 [HideInInspector] public IInputManager input;
-                [HideInInspector] public PlayerHands player;
                 [HideInInspector] public Vector3 moveDirection;
                 [HideInInspector] public bool isGrounded;
             
@@ -107,7 +104,6 @@ namespace AsakuShop.Input
                 standingCharacterControllerCenter = characterController.center;
 
                 input = GetComponent<IInputManager>();
-                player = FindFirstObjectByType<PlayerHands>();
 
                 stateFactory = new PlayerStateFactory(this);
             }
@@ -226,7 +222,7 @@ namespace AsakuShop.Input
                         //if player is holding something, don't show a context hint for 
                         //interactables the player is looking at.
                         lastInteractable = interactable;
-                        ContextHintDisplay.Instance.SetContext(ContextHintDisplay.Instance.GetContext(interactable));
+                        UIService.ContextHint?.SetContext(UIService.ContextHint.GetContext(interactable));
                     }
 
                     //if player presses interact key, call the interactable's OnInteract method
@@ -244,13 +240,13 @@ namespace AsakuShop.Input
                 else
                 {
                     lastInteractable = null;
-                    ContextHintDisplay.Instance.HideContext();
+                    UIService.ContextHint?.HideContext();
                 }       
             }
             else
             {
                 lastInteractable = null;
-                ContextHintDisplay.Instance.HideContext();
+                UIService.ContextHint?.HideContext();
             } 
         }
     #endregion

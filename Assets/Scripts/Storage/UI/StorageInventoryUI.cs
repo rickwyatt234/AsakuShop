@@ -35,6 +35,32 @@ namespace AsakuShop.Storage
                 inventoryCanvas.gameObject.SetActive(false);
         }
 
+        private void OnEnable()
+        {
+            CoreEvents.OnInventoryOpenRequested += OnInventoryOpenRequested;
+            CoreEvents.OnStorageUIRefreshRequested += OnStorageUIRefreshRequested;
+        }
+
+        private void OnDisable()
+        {
+            CoreEvents.OnInventoryOpenRequested -= OnInventoryOpenRequested;
+            CoreEvents.OnStorageUIRefreshRequested -= OnStorageUIRefreshRequested;
+        }
+
+        private void OnInventoryOpenRequested(object payload)
+        {
+            if (payload is StorageContainer container)
+                OpenContainer(container);
+        }
+
+        private void OnStorageUIRefreshRequested(object payload)
+        {
+            if (payload is StorageContainer container)
+                RefreshUI(container);
+            else
+                RefreshUI();
+        }
+
         public void OpenContainer(StorageContainer container)
         {
             if (container == null)
