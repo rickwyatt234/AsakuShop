@@ -69,6 +69,11 @@ namespace AsakuShop.Storage
             if (StorageInventoryUI.Instance != null)
                 StorageInventoryUI.Instance.OpenContainer(this);
         }
+
+        public bool TryAddItem(ItemInstance item) => inventory.TryAddItem(item);
+        public bool TryRemoveItem(ItemInstance item) => inventory.TryRemoveItem(item);
+        public StorageInventory Inventory => inventory;
+        public float GetCurrentWeight() => inventory.GetCurrentWeight();
 #endregion
     }
 }
