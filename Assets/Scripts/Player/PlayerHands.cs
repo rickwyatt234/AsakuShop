@@ -113,7 +113,7 @@ namespace AsakuShop.Player
                 Debug.Log($"Picked up item: {heldItem.Definition.DisplayName}");
             }
 
-            else if (cContainer != null)
+            else if (container != null)
             {
                 heldItemVisual = container.gameObject;
                 heldItemVisualTransform = heldItemVisual.transform;
