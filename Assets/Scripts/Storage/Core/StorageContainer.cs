@@ -5,7 +5,7 @@ using AsakuShop.UI;
 
 namespace AsakuShop.Storage
 {
-    public class StorageContainer : MonoBehaviour, IInteractable
+    public class StorageContainer : MonoBehaviour, IInteractable, IHoldable
     {
         // Unique identifier for this container (could be used for saving/loading)
         [SerializeField] private string containerID = "Container001";
@@ -29,6 +29,12 @@ namespace AsakuShop.Storage
         public Vector3 heldOffset = new Vector3(0, -0.5f, 1f);
         public Quaternion heldRotation = Quaternion.Euler(0, 180, 0);
 
+#region IHoldable Implementation
+        string IHoldable.DisplayName => DisplayName;
+        Vector3 IHoldable.HeldOffset => heldOffset;
+        Quaternion IHoldable.HeldRotation => heldRotation;
+        GameObject IHoldable.GameObject => gameObject;
+#endregion
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #region Unity Lifecycle
@@ -45,29 +51,22 @@ namespace AsakuShop.Storage
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #region IInteractable Implementation
-
-// Reference to PlayerHands for pickup logic
-private IPickupTarget pickupTarget;
-
         public void OnInteract()
         {
+            IPickupTarget pickupTarget = PlayerService.PickupTarget;
             if (pickupTarget != null)
             {
-              if (!pickupTarget.IsHoldingInteractable)
-                {
-                  //pick up container
+                if (!pickupTarget.IsHoldingInteractable)
                     pickupTarget.TryPickupInteractable(gameObject);
-                }
-              else
-                {
+                else
                     Debug.Log("[STORAGE CONTAINER] Player is holding something, cannot pickup container");
-                }
             }
             else
             {
-                Debug.LogWarning("PlayerHands reference is missing in StorageContainer");
+                Debug.LogWarning("[StorageContainer] No IPickupTarget registered in PlayerService.");
             }
         }
+
         public void OnExamine()
         {
             OpenInventory();
@@ -83,6 +82,11 @@ private IPickupTarget pickupTarget;
             if (StorageInventoryUI.Instance != null)
                 StorageInventoryUI.Instance.OpenContainer(this);
         }
+
+        public bool TryAddItem(ItemInstance item) => inventory.TryAddItem(item);
+        public bool TryRemoveItem(ItemInstance item) => inventory.TryRemoveItem(item);
+        public StorageInventory Inventory => inventory;
+        public float GetCurrentWeight() => inventory.GetCurrentWeight();
     }
 #endregion
 }   
