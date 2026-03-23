@@ -30,6 +30,7 @@ namespace AsakuShop.Items
             if (ItemInstance != null)
             {
                 playerHands.heldItem = ItemInstance;
+                playerHands.heldItemPickup = this;
                 playerHands.TryPickupInteractable(gameObject);
             }
         }
