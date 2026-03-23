@@ -15,6 +15,13 @@ namespace AsakuShop.Core
         public static event Action OnBeforeSave;
         public static event Action OnAfterLoad;
         public static event Action<int> OnMidnightReached;
+
+        // Fired by StorageContainer instead of calling StorageInventoryUI directly
+        public static event Action<object> OnInventoryOpenRequested;
+        // Fired by PlayerHands.TryStoreItem instead of calling StorageInventoryUI.RefreshUI directly
+        public static event Action<object> OnStorageUIRefreshRequested;
+        // Fired by PlayerHands instead of calling ItemExaminer.StartExamination directly
+        public static event Action<object> OnExamineRequested;
 #endregion
 
 #region Raise Helpers
@@ -32,6 +39,13 @@ namespace AsakuShop.Core
             => OnAfterLoad?.Invoke();
         internal static void FireMidnightReached(int dayIndex)
             => OnMidnightReached?.Invoke(dayIndex);
+
+        public static void RaiseInventoryOpenRequested(object container)
+            => OnInventoryOpenRequested?.Invoke(container);
+        public static void RaiseStorageUIRefreshRequested(object container)
+            => OnStorageUIRefreshRequested?.Invoke(container);
+        public static void RaiseExamineRequested(object item)
+            => OnExamineRequested?.Invoke(item);
 #endregion
 
 #region Cleanup Helper
