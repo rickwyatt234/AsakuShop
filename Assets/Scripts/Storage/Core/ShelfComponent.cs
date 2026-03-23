@@ -11,7 +11,7 @@ namespace AsakuShop.Storage
     {
         // Unique identifier for this shelf (could be used for saving/loading)
         [SerializeField] private string shelfID = "Shelf001";
-        public string shelfName = "Shelf";
+        public string DisplayName = "Shelf";
 
 
         // Held item position and rotation configuration
