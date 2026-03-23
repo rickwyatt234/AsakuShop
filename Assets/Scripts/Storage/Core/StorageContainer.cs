@@ -51,13 +51,12 @@ private IPickupTarget pickupTarget;
 
         public void OnInteract()
         {
-            if (playerHands != null)
+            if (pickupTarget != null)
             {
-              if (!playerHands.IsHoldingInteractable)
+              if (!pickupTarget.IsHoldingInteractable)
                 {
                   //pick up container
                     pickupTarget.TryPickupInteractable(gameObject);
-                    playerHands.TryPickupInteractable(playerHands.heldContainer.gameObject);  
                 }
               else
                 {
