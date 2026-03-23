@@ -59,5 +59,15 @@ namespace AsakuShop.Economy
             currentBalance = amount;
             OnBalanceChanged?.Invoke(currentBalance);
         }
+
+
+#region UnityEngine.Debugging
+        private void OnGUI()
+        {
+            GUILayout.BeginArea(new Rect(0, 80, 300, 200));
+            GUILayout.Label($"Wallet: ¥{GetBalance()}");
+            GUILayout.EndArea();
+        }
+#endregion
     }
 }
