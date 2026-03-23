@@ -24,23 +24,17 @@ namespace AsakuShop.Items
 #region IInteractable implementation
         public void OnInteract()
         {
-            if (ItemInstance != null)
-            {
-                playerHands.heldItem = ItemInstance;
-                playerHands.heldItemPickup = this;
-                playerHands.TryPickupInteractable(gameObject);
-            }
+            if (ItemInstance != null && pickupTarget != null)
+                pickupTarget.TryPickupInteractable(gameObject);
         }
+
         public void OnExamine()
         {
-            //If player is holding this item, show the examination UI
-             if (playerHands != null && playerHands.heldItem == ItemInstance)
-             {
+            if (pickupTarget != null && pickupTarget.IsHoldingInteractable)
                 ItemExaminer.Instance.StartExamination(ItemInstance);
-             }
-             else if (ItemInstance.IsOnAShelf)
+            else if (ItemInstance.IsOnAShelf)
             {
-                //Set price from the shelf
+                // Set price from the shelf
             }
         }
 #endregion
