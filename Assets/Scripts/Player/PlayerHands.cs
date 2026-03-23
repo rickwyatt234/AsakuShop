@@ -5,7 +5,6 @@ using AsakuShop.Items;
 using AsakuShop.Input;
 using AsakuShop.Store;
 using AsakuShop.Core;
-using AsakuShop.UI;
 
 
 namespace AsakuShop.Player
@@ -306,7 +305,7 @@ namespace AsakuShop.Player
             {
                 Debug.Log($"Stored {heldItem.Definition.DisplayName} in {container.DisplayName}");
                 ClearHeldState();
-                StorageInventoryUI.Instance?.RefreshUI(container.GameObject.GetComponent<UnityEngine.Component>());
+                CoreEvents.RaiseStorageUIRefreshRequested(container);
             }
         }
 

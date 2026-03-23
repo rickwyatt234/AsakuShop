@@ -1,6 +1,5 @@
 using UnityEngine;
 using AsakuShop.Core;
-using AsakuShop.UI;
 
 namespace AsakuShop.Items
 {
@@ -31,7 +30,7 @@ namespace AsakuShop.Items
         public void OnExamine()
         {
             if (pickupTarget != null && pickupTarget.IsHoldingInteractable)
-                ItemExaminer.Instance.StartExamination(ItemInstance);
+                CoreEvents.RaiseExamineRequested(ItemInstance);
             else if (ItemInstance.IsOnAShelf)
             {
                 // Set price from the shelf

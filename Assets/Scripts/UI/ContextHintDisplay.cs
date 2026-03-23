@@ -8,7 +8,7 @@ using AsakuShop.Items;
 
 namespace AsakuShop.UI
 {
-    public class ContextHintDisplay : Monobehaviour
+    public class ContextHintDisplay : Monobehaviour, IContextHintDisplay
     {
         private static ContextHintDisplay _instance;
         public static ContextHintDisplay Instance
@@ -32,6 +32,7 @@ namespace AsakuShop.UI
         private void Awake()
         {
             _instance = this;
+            UIService.ContextHint = this;
             DontDestroyOnLoad(gameObject);
 
             if (contextText == null)
