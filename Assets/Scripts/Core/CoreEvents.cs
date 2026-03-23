@@ -16,6 +16,7 @@ namespace AsakuShop.Core
         public static event Action OnAfterLoad;
         public static event Action<int> OnMidnightReached;
 
+        // UI decoupling events (Step 2)
         // Fired by StorageContainer instead of calling StorageInventoryUI directly
         public static event Action<object> OnInventoryOpenRequested;
         // Fired by PlayerHands.TryStoreItem instead of calling StorageInventoryUI.RefreshUI directly
@@ -40,6 +41,7 @@ namespace AsakuShop.Core
         internal static void FireMidnightReached(int dayIndex)
             => OnMidnightReached?.Invoke(dayIndex);
 
+        // UI decoupling raise helpers (Step 2)
         public static void RaiseInventoryOpenRequested(object container)
             => OnInventoryOpenRequested?.Invoke(container);
         public static void RaiseStorageUIRefreshRequested(object container)
@@ -51,13 +53,16 @@ namespace AsakuShop.Core
 #region Cleanup Helper
         public static void ClearAll()
         {
-            OnPhaseChanged = null;
-            OnTimeAdvanced = null;
-            OnDayStarted   = null;
-            OnDayEnded     = null;
-            OnBeforeSave   = null;
-            OnAfterLoad    = null;
-            OnMidnightReached = null;
+            OnPhaseChanged              = null;
+            OnTimeAdvanced              = null;
+            OnDayStarted                = null;
+            OnDayEnded                  = null;
+            OnBeforeSave                = null;
+            OnAfterLoad                 = null;
+            OnMidnightReached           = null;
+            OnInventoryOpenRequested    = null;
+            OnStorageUIRefreshRequested = null;
+            OnExamineRequested          = null;
         }
 #endregion
     }
