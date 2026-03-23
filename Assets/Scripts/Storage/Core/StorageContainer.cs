@@ -1,7 +1,6 @@
 using UnityEngine;
 using AsakuShop.Items;
 using AsakuShop.Core;
-using AsakuShop.Player;
 using AsakuShop.UI;
 
 namespace AsakuShop.Storage
@@ -35,9 +34,11 @@ namespace AsakuShop.Storage
 #region Unity Lifecycle
         private void Awake()
         {
+            pickupTarget = PlayerService.PickupTarget;
+            if (pickupTarget == null)
+                Debug.LogError("[ItemPickup] No IPickupTarget registered in PlayerService. Make sure PlayerHands is in the scene.");
             // Initialize inventory with specified size
             inventory = new StorageInventory(inventorySize);
-            playerHands = FindFirstObjectByType<PlayerHands>();
         }
 #endregion
 
@@ -46,7 +47,7 @@ namespace AsakuShop.Storage
 #region IInteractable Implementation
 
 // Reference to PlayerHands for pickup logic
-private PlayerHands playerHands;
+private IPickupTarget pickupTarget;
 
         public void OnInteract()
         {
@@ -55,7 +56,7 @@ private PlayerHands playerHands;
               if (!playerHands.IsHoldingInteractable)
                 {
                   //pick up container
-                    playerHands.heldContainer = this;
+                    pickupTarget.TryPickupInteractable(gameObject);
                     playerHands.TryPickupInteractable(playerHands.heldContainer.gameObject);  
                 }
               else
