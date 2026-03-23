@@ -7,7 +7,7 @@ namespace AsakuShop.Items
     public class ItemPickup : MonoBehaviour, IInteractable
     {
         public ItemInstance ItemInstance { get; private set; }
-        private IPickupTarget pickupTarget;;
+        private IPickupTarget pickupTarget;
 
         public void Initialize(ItemInstance itemInstance)
         {
