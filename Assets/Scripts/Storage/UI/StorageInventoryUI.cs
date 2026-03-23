@@ -33,6 +33,31 @@ namespace AsakuShop.Storage
 
             if (inventoryCanvas != null)
                 inventoryCanvas.gameObject.SetActive(false);
+
+            CoreEvents.OnInventoryOpenRequested    += HandleInventoryOpenRequested;
+            CoreEvents.OnStorageUIRefreshRequested += HandleStorageUIRefreshRequested;
+        }
+
+        private void OnDestroy()
+        {
+            CoreEvents.OnInventoryOpenRequested    -= HandleInventoryOpenRequested;
+            CoreEvents.OnStorageUIRefreshRequested -= HandleStorageUIRefreshRequested;
+        }
+
+        private void HandleInventoryOpenRequested(object payload)
+        {
+            if (payload is StorageContainer container)
+                OpenContainer(container);
+        }
+
+        private void HandleStorageUIRefreshRequested(object payload)
+        {
+            if (payload is GameObject go)
+            {
+                StorageContainer container = go.GetComponent<StorageContainer>();
+                if (container != null)
+                    RefreshUI(container);
+            }
         }
 
         public void OpenContainer(StorageContainer container)
