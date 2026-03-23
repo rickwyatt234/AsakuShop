@@ -8,10 +8,22 @@ using AsakuShop.Items;
 
 namespace AsakuShop.UI
 {
-    public class ContextHintDisplay : MonoBehaviour
+    public class ContextHintDisplay : Monobehaviour
     {
-        public static ContextHintDisplay Instance { get; private set; }
-
+        private static ContextHintDisplay _instance;
+        public static ContextHintDisplay Instance
+        {
+            get
+            {
+                if (_instance == null)
+                {
+                    GameObject go = new GameObject("[ContextHintDisplayController]");
+                    _instance = go.AddComponent<ContextHintDisplay>();
+                }
+                return _instance;
+            }
+        }
+        
         [SerializeField] private TextMeshProUGUI contextText;
         [SerializeField] private CanvasGroup contextCanvasGroup;
         [HideInInspector] public IInputManager input;
@@ -19,12 +31,8 @@ namespace AsakuShop.UI
 
         private void Awake()
         {
-            if (Instance != null && Instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
-            Instance = this;
+            _instance = this;
+            DontDestroyOnLoad(gameObject);
 
             if (contextText == null)
                 contextText = GetComponentInChildren<TextMeshProUGUI>();
@@ -55,16 +63,8 @@ namespace AsakuShop.UI
 
         private IInteractable GetHeldInteractable()
         {
-            if (player.heldItem != null)
-            {
-                // Find the ItemPickup component on the held visual
-                if (player.heldItemVisual != null)
-                {
-                    ItemPickup pickup = player.heldItemVisual.GetComponent<ItemPickup>();
-                    if (pickup != null)
-                        return pickup;
-                }
-            }
+            if (player.heldItem != null && player.heldItemPickup != null)
+                return player.heldItemPickup;
             if (player.heldContainer != null)
                 return player.heldContainer;
             if (player.heldShelf != null)
@@ -91,7 +91,7 @@ namespace AsakuShop.UI
             // switch statement based on interactable type or tags to return appropriate context hints
             switch (interactable)
             {
-                case ItemInstance itemInstance:
+                case ItemPickup itemPickup:
                     return $"[{interactKey}]: Pick up";
                 case StorageContainer storageContainer:
                     return $"[{interactKey}]: Pick up\n" +
@@ -115,20 +115,41 @@ namespace AsakuShop.UI
 
             switch (interactable)
             {
-                case ItemInstance itemInstance:
+                case ItemPickup itemPickup:
+                    // Check if player is looking at a shelf within stocking range
+                    Ray ray = new Ray(player.playerCamera.position, player.playerCamera.forward);
+                    if (Physics.Raycast(ray, out RaycastHit hit, 3f))
+                    {
+                        ShelfComponent shelf = hit.collider.GetComponent<ShelfComponent>();
+                        if (shelf != null)
+                            return $"[{interactKey}]: Stock\n" +
+                                   $"[{examineKey}]: Examine\n" +
+                                   $"[{rotateKey}]: Rotate Vertically\n" +
+                                   $"[{rotateModifierKey}] + [{rotateKey}]: Rotate Horizontally";
+                        StorageContainer container = hit.collider.GetComponent<StorageContainer>();
+                        if (container != null)
+                            return $"[{interactKey}]: Drop\n" +
+                                   $"[{examineKey}]: Store\n" +
+                                   $"[{rotateKey}]: Rotate Vertically\n" +
+                                   $"[{rotateModifierKey}] + [{rotateKey}]: Rotate Horizontally";
+                    }
+                    // Default item context
                     return $"[{interactKey}]: Drop\n" +
                            $"[{examineKey}]: Examine\n" +
                            $"[{rotateKey}]: Rotate Vertically\n" +
                            $"[{rotateModifierKey}] + [{rotateKey}]: Rotate Horizontally";
+                           
                 case StorageContainer storageContainer:
                     return $"[{interactKey}]: Drop\n" +
                            $"[{rotateKey}]: Rotate Vertically\n" +
                            $"[{rotateModifierKey}] + [{rotateKey}]: Rotate Horizontally";
+                           
                 case ShelfComponent shelfComponent:
-                    if (shelfComponent.IsShelfWallMounted(shelfComponent))
-                        return $"[{examineKey}]: Pick up";
+                    if (player.IsLookingAtSuitableShelfMountingPosition)
+                        return $"[{interactKey}]: Mount";
                     else
                         return $"[{interactKey}]: Drop";
+                        
                 default:
                     return "";
             }
