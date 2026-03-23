@@ -9,7 +9,6 @@ namespace AsakuShop.Storage
     public class StorageInventoryUI : MonoBehaviour
     {
         public static StorageInventoryUI Instance { get; private set; }
-        public static bool IsInventoryOpen { get; private set; } = false;
 
         [SerializeField] private Canvas inventoryCanvas;
         [SerializeField] private RectTransform itemContainer;
@@ -57,6 +56,8 @@ namespace AsakuShop.Storage
                 StorageContainer container = go.GetComponent<StorageContainer>();
                 if (container != null)
                     RefreshUI(container);
+                else
+                    Debug.LogWarning("[StorageInventoryUI] Refresh requested but no StorageContainer found on payload GameObject.");
             }
         }
 
@@ -205,7 +206,7 @@ namespace AsakuShop.Storage
             );
 
             ItemPickup pickup = worldItem.AddComponent<ItemPickup>();
-            pickup.itemInstance = entry.itemInstance;
+            pickup.Initialize(entry.itemInstance);
 
             Rigidbody rb = worldItem.GetComponent<Rigidbody>();
             if (rb == null)

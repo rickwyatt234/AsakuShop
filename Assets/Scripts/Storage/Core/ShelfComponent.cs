@@ -56,10 +56,14 @@ namespace AsakuShop.Storage
 #region Unity Lifecycle
         private void Awake()
         {
+            shelfInteraction = GetComponent<ShelfInteraction>();
+        }
+
+        private void Start()
+        {
             pickupTarget = PlayerService.PickupTarget;
             if (pickupTarget == null)
                 Debug.LogError("[ShelfComponent] No IPickupTarget registered in PlayerService. Make sure PlayerHands is in the scene.");
-            shelfInteraction = GetComponent<ShelfInteraction>();
         }
 #endregion
 

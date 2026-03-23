@@ -23,6 +23,10 @@ namespace AsakuShop.Core
         public static event Action<object> OnStorageUIRefreshRequested;
         // Fired by PlayerHands instead of calling ItemExaminer.StartExamination directly
         public static event Action<object> OnExamineRequested;
+        // Fired by FirstPersonController instead of calling ContextHintDisplay directly
+        public static event Action<IInteractable> OnContextHintRequested;
+        // Fired by FirstPersonController when no interactable is in range
+        public static event Action OnContextHintHideRequested;
 #endregion
 
 #region Raise Helpers
@@ -38,7 +42,7 @@ namespace AsakuShop.Core
             => OnBeforeSave?.Invoke();
         internal static void RaiseAfterLoad()
             => OnAfterLoad?.Invoke();
-        internal static void FireMidnightReached(int dayIndex)
+        internal static void RaiseMidnightReached(int dayIndex)
             => OnMidnightReached?.Invoke(dayIndex);
 
         // UI decoupling raise helpers (Step 2)
@@ -48,6 +52,10 @@ namespace AsakuShop.Core
             => OnStorageUIRefreshRequested?.Invoke(container);
         public static void RaiseExamineRequested(object item)
             => OnExamineRequested?.Invoke(item);
+        public static void RaiseContextHintRequested(IInteractable interactable)
+            => OnContextHintRequested?.Invoke(interactable);
+        public static void RaiseContextHintHideRequested()
+            => OnContextHintHideRequested?.Invoke();
 #endregion
 
 #region Cleanup Helper
@@ -63,6 +71,8 @@ namespace AsakuShop.Core
             OnInventoryOpenRequested    = null;
             OnStorageUIRefreshRequested = null;
             OnExamineRequested          = null;
+            OnContextHintRequested      = null;
+            OnContextHintHideRequested  = null;
         }
 #endregion
     }
