@@ -86,7 +86,7 @@ namespace AsakuShop.Core
             if (CurrentTime.Hour == TimeConstants.MidnightHour && CurrentTime.Minute == 0 && !_midnightSummaryFiredToday)
             {
                 _midnightSummaryFiredToday = true;
-                CoreEvents.FireMidnightReached(CurrentTime.DayIndex);
+                CoreEvents.RaiseMidnightReached(CurrentTime.DayIndex);
             }
         }
 #endregion

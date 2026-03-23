@@ -1,5 +1,4 @@
 using AsakuShop.Core;
-using AsakuShop.UI;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -226,7 +225,7 @@ namespace AsakuShop.Input
                         //if player is holding something, don't show a context hint for 
                         //interactables the player is looking at.
                         lastInteractable = interactable;
-                        ContextHintDisplay.Instance.SetContext(ContextHintDisplay.Instance.GetContext(interactable));
+                        CoreEvents.RaiseContextHintRequested(interactable);
                     }
 
                     //if player presses interact key, call the interactable's OnInteract method
@@ -244,13 +243,13 @@ namespace AsakuShop.Input
                 else
                 {
                     lastInteractable = null;
-                    ContextHintDisplay.Instance.HideContext();
+                    CoreEvents.RaiseContextHintHideRequested();
                 }       
             }
             else
             {
                 lastInteractable = null;
-                ContextHintDisplay.Instance.HideContext();
+                CoreEvents.RaiseContextHintHideRequested();
             } 
         }
     #endregion

@@ -40,8 +40,23 @@ namespace AsakuShop.UI
 
             input = FindFirstObjectByType<InputManager>();
 
+            CoreEvents.OnContextHintRequested += HandleContextHintRequested;
+            CoreEvents.OnContextHintHideRequested += HandleContextHintHideRequested;
+
             HideContext();
         }
+
+        private void OnDestroy()
+        {
+            CoreEvents.OnContextHintRequested -= HandleContextHintRequested;
+            CoreEvents.OnContextHintHideRequested -= HandleContextHintHideRequested;
+        }
+
+        private void HandleContextHintRequested(IInteractable interactable)
+            => SetContext(GetContext(interactable));
+
+        private void HandleContextHintHideRequested()
+            => HideContext();
 
         private void Start()
         {

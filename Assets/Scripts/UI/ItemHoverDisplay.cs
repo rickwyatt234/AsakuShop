@@ -86,10 +86,10 @@ namespace AsakuShop.UI
                 for (int i = 0; i < hits.Length; i++)
                 {
                     RaycastHit hit = hits[i];
-                    ItemInstance itemPickup = hit.collider.GetComponent<ItemInstance>();
+                    ItemPickup itemPickup = hit.collider.GetComponent<ItemPickup>();
                     if (itemPickup != null)
                     {
-                        hoveredItem = itemPickup;
+                        hoveredItem = itemPickup.ItemInstance;
                         break;
                     }
                 }
