@@ -79,8 +79,7 @@ namespace AsakuShop.Storage
 
             else
             {
-                playerHands.heldShelf = this;
-                playerHands.TryPickupInteractable(playerHands.heldShelf.gameObject);
+                pickupTarget.TryPickupInteractable(gameObject)
             }
         }
         public void OnExamine()
@@ -90,8 +89,7 @@ namespace AsakuShop.Storage
 
             //Pick up shelf
             //This is to prevent the normal interaction button from picking up the shelf accidentally
-            playerHands.heldShelf = this;
-            playerHands.TryPickupInteractable(playerHands.heldShelf.gameObject);
+            pickupTarget.TryPickupInteractable(gameObject)
 
             //Keep items visually on the shelf while it's being held by parenting them to the shelf object
             List<ItemInstance> stockedItems = shelfInteraction.GetAllItems();
