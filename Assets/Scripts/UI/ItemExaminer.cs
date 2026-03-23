@@ -3,7 +3,6 @@ using AsakuShop.Items;
 using AsakuShop.Input;
 using AsakuShop.Core;
 using TMPro;
-using AsakuShop.Storage;
 
 namespace AsakuShop.UI
 {
@@ -51,6 +50,19 @@ namespace AsakuShop.UI
             // Disable canvas by default
             if (examinationCanvas != null)
                 examinationCanvas.gameObject.SetActive(false);
+
+            CoreEvents.OnExamineRequested += HandleExamineRequested;
+        }
+
+        private void OnDestroy()
+        {
+            CoreEvents.OnExamineRequested -= HandleExamineRequested;
+        }
+
+        private void HandleExamineRequested(object payload)
+        {
+            if (payload is ItemInstance item)
+                StartExamination(item);
         }
 #endregion
 

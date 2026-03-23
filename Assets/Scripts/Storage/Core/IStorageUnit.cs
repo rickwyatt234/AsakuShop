@@ -1,7 +1,7 @@
 using AsakuShop.Items;
 using System.Collections.Generic;
 
-namespace AsakuShop.Storage
+namespace AsakuShop.Core
 {
     public interface IStorageUnit
     {

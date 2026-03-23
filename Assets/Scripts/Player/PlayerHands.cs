@@ -3,9 +3,7 @@ using UnityEngine.InputSystem;
 using System.Collections.Generic;
 using AsakuShop.Items;
 using AsakuShop.Input;
-using AsakuShop.Store;
 using AsakuShop.Core;
-using AsakuShop.UI;
 
 
 namespace AsakuShop.Player
@@ -85,6 +83,18 @@ namespace AsakuShop.Player
                 if (heldItemVisual != null)
                     heldItemVisual.SetActive(true);
             }
+        }
+
+        public IInteractable GetHeldInteractable()
+        {
+            if (heldItem != null && heldItemPickup != null)
+                return heldItemPickup;
+            // StorageContainer and ShelfComponent both implement IInteractable; cast is safe
+            if (heldContainer != null)
+                return heldContainer as IInteractable;
+            if (heldShelf != null)
+                return heldShelf as IInteractable;
+            return null;
         }
 #endregion
 
@@ -306,7 +316,7 @@ namespace AsakuShop.Player
             {
                 Debug.Log($"Stored {heldItem.Definition.DisplayName} in {container.DisplayName}");
                 ClearHeldState();
-                StorageInventoryUI.Instance?.RefreshUI(container.GameObject.GetComponent<UnityEngine.Component>());
+                CoreEvents.RaiseStorageUIRefreshRequested(container.GameObject);
             }
         }
 

@@ -10,5 +10,6 @@ namespace AsakuShop.Core
         bool IsHoldingInteractable { get; }
         bool IsLookingAtSuitableShelfMountingPosition { get; }
         void TryPickupInteractable(GameObject interactableObject);
+        IInteractable GetHeldInteractable();
     }
 }

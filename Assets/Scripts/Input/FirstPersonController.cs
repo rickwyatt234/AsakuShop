@@ -1,5 +1,4 @@
 using AsakuShop.Core;
-using AsakuShop.Player;
 using AsakuShop.UI;
 using UnityEngine;
 using UnityEngine.UI;
@@ -28,7 +27,7 @@ namespace AsakuShop.Input
 
                 [HideInInspector] public CharacterController characterController;
                 [HideInInspector] public IInputManager input;
-                [HideInInspector] public PlayerHands player;
+                [HideInInspector] public IPickupTarget player;
                 [HideInInspector] public Vector3 moveDirection;
                 [HideInInspector] public bool isGrounded;
             
@@ -107,13 +106,14 @@ namespace AsakuShop.Input
                 standingCharacterControllerCenter = characterController.center;
 
                 input = GetComponent<IInputManager>();
-                player = FindFirstObjectByType<PlayerHands>();
 
                 stateFactory = new PlayerStateFactory(this);
             }
 
             private void Start()
             {
+                player = PlayerService.PickupTarget;
+
                 currentState = stateFactory.Grounded();
                 currentState.EnterState();
 

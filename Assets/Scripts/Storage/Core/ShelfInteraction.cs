@@ -1,5 +1,6 @@
 using UnityEngine;
 using AsakuShop.Items;
+using AsakuShop.Core;
 using System;
 using System.Collections.Generic;
 
