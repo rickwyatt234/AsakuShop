@@ -10,7 +10,7 @@ using AsakuShop.UI;
 
 namespace AsakuShop.Player
 {
-    public class PlayerHands : MonoBehaviour
+    public class PlayerHands : MonoBehaviour, IPickupTarget
     {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -43,6 +43,7 @@ namespace AsakuShop.Player
         {
             playerCamera = Camera.main.transform;
             input = GetComponent<IInputManager>();
+            PlayerService.PickupTarget = this;
         }
 
         private void Update()
@@ -97,56 +98,58 @@ namespace AsakuShop.Player
                 return;
             if (GameStateController.Instance.CurrentPhase != GamePhase.Playing)
                 return;
-
-            if (heldItem != null)
+                
+            ItemPickup itemPickup       = interactableObject.GetComponent<ItemPickup>();
+            StorageContainer container  = interactableObject.GetComponent<StorageContainer>();
+            ShelfComponent shelf        = interactableObject.GetComponent<ShelfComponent>();
+            
+            if (itemPickup != null)
             {
+                heldItem = itemPickup.ItemInstance;
+                heldItemPickup = itemPickup;
+                
                 InstantiateHeldItemVisual();
-                Destroy(heldItemPickup.gameObject);
+                Destroy(interactableObject);
                 Debug.Log($"Picked up item: {heldItem.Definition.DisplayName}");
-
-                Rigidbody rb = heldItemr.GetComponent<Rigidbody>();
-                if (rb != null) rb.isKinematic = true;
-                foreach (Collider col in heldItem.GetComponentsInChildren<Collider>())
-                    col.enabled = false;
             }
 
-            else if (heldContainer != null)
+            else if (cContainer != null)
             {
-                //Held Item Visual
-                heldItemVisual = heldContainer.gameObject;
+                heldItemVisual = container.gameObject;
                 heldItemVisualTransform = heldItemVisual.transform;
                 heldItemVisualTransform.SetParent(playerCamera);
-                heldItemVisualTransform.localPosition = heldContainer.heldOffset;
-                heldItemVisualTransform.localRotation = heldContainer.heldRotation;
+                heldItemVisualTransform.localPosition = container.heldOffset;
+                heldItemVisualTransform.localRotation = container.heldRotation;
 
                 //Component and collider adjustments
-                Rigidbody rb = heldContainer.GetComponent<Rigidbody>();
+                Rigidbody rb = container.GetComponent<Rigidbody>();
                 if (rb != null)
                 {
                     rb.isKinematic = true;
                 }
-                foreach (Collider col in heldContainer.GetComponentsInChildren<Collider>())                
+                foreach (Collider col in container.GetComponentsInChildren<Collider>())                
                 {
                     col.enabled = false;
                 }
-                Debug.Log($"Picked up storage container: {heldContainer.DisplayName}");
+                Debug.Log($"Picked up storage container: {container.DisplayName}");
             }
-            else if (heldShelf != null)
+            else if (shelf != null)
             {
-                //Held Item Visual
-                heldItemVisual = heldShelf.gameObject;
+                heldShelf = shelf;
+                
+                heldItemVisual = shelf.gameObject;
                 heldItemVisualTransform = heldItemVisual.transform;
                 heldItemVisualTransform.SetParent(playerCamera);
-                heldItemVisualTransform.localPosition = heldShelf.heldOffset;
-                heldItemVisualTransform.localRotation = heldShelf.heldRotation;
+                heldItemVisualTransform.localPosition = shelf.heldOffset;
+                heldItemVisualTransform.localRotation = shelf.heldRotation;
 
                 //Component and collider adjustments
-                Rigidbody rb = heldShelf.GetComponent<Rigidbody>();
+                Rigidbody rb = shelf.GetComponent<Rigidbody>();
                 if (rb != null)
                 {
                     rb.isKinematic = true;
                 }
-                foreach (Collider col in heldShelf.GetComponentsInChildren<Collider>())                
+                foreach (Collider col in shelf.GetComponentsInChildren<Collider>())                
                 {
                     col.enabled = false;
                 }
