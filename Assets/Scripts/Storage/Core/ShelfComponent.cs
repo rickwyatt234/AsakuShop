@@ -3,7 +3,6 @@ using AsakuShop.Items;
 using AsakuShop.UI;
 using System.Collections.Generic;
 using AsakuShop.Core;
-using AsakuShop.Player;
 
 namespace AsakuShop.Storage
 {
@@ -54,7 +53,7 @@ namespace AsakuShop.Storage
         public Dictionary<ItemInstance, int> itemToSlotIndex = new();
 
         //References
-        private PlayerHands playerHands;
+        private IPickupTarget pickupTarget;
         private ShelfInteraction shelfInteraction;
 
 
@@ -62,7 +61,9 @@ namespace AsakuShop.Storage
 #region Unity Lifecycle
         private void Awake()
         {
-            playerHands = FindFirstObjectByType<PlayerHands>();
+            pickupTarget = PlayerService.PickupTarget;
+            if (pickupTarget == null)
+                Debug.LogError("[ItemPickup] No IPickupTarget registered in PlayerService. Make sure PlayerHands is in the scene.");
             shelfInteraction = GetComponent<ShelfInteraction>();
         }
 #endregion
