@@ -29,9 +29,9 @@ namespace AsakuShop.Items
 
         public void OnExamine()
         {
-            if (pickupTarget != null && pickupTarget.IsHoldingInteractable)
+            if (pickupTarget != null && pickupTarget.GetHeldInteractable() == this)
                 CoreEvents.RaiseExamineRequested(ItemInstance);
-            else if (ItemInstance.IsOnAShelf)
+            else if (ItemInstance != null && ItemInstance.IsOnAShelf)
             {
                 // Set price from the shelf
             }
