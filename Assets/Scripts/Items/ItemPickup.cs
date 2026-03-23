@@ -1,6 +1,5 @@
 using UnityEngine;
 using AsakuShop.Core;
-using AsakuShop.Player;
 using AsakuShop.UI;
 
 namespace AsakuShop.Items
@@ -8,7 +7,7 @@ namespace AsakuShop.Items
     public class ItemPickup : MonoBehaviour, IInteractable
     {
         public ItemInstance ItemInstance { get; private set; }
-        private PlayerHands playerHands;
+        private IPickupTarget pickupTarget;;
 
         public void Initialize(ItemInstance itemInstance)
         {
@@ -17,11 +16,9 @@ namespace AsakuShop.Items
 
         private void Start()
         {
-            playerHands = FindFirstObjectByType<PlayerHands>();
-            if (playerHands == null)
-            {
-                Debug.LogError("PlayerHands component not found in the scene. Make sure there is a Player with PlayerHands.");
-            }
+            pickupTarget = PlayerService.PickupTarget;
+            if (pickupTarget == null)
+                Debug.LogError("[ItemPickup] No IPickupTarget registered in PlayerService. Make sure PlayerHands is in the scene.");
         }
 
 #region IInteractable implementation
