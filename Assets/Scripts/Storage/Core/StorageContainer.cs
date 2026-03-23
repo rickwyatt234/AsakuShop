@@ -10,7 +10,7 @@ namespace AsakuShop.Storage
     {
         // Unique identifier for this container (could be used for saving/loading)
         [SerializeField] private string containerID = "Container001";
-        public string containerName = "Container";
+        public string DisplayName = "Container";
 
 
         // Preferred Storage Type for food spoilage purposes (e.g. Dry, Refrigerated, Frozen)
