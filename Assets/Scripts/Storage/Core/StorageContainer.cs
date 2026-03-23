@@ -56,7 +56,8 @@ namespace AsakuShop.Storage
 
         public void OnExamine()
         {
-            OpenInventory();
+            if (!InventoryState.IsOpen)
+                OpenInventory();
         }
 #endregion
 

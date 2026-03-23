@@ -29,7 +29,7 @@ namespace AsakuShop.UI
         private GameObject examinedItemDisplay;
         private GamePhase phaseBeforeExamination;
         private bool previousExamineState = false;
-        [HideInInspector] public InputManager input;
+        [HideInInspector] public IInputManager input;
 
 #region Singleton
         private void Awake()

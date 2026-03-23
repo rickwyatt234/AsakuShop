@@ -13,13 +13,8 @@ namespace AsakuShop.UI
                 Destroy(gameObject);
                 return;
             }
-            if (Instance == null)
-            {
-                GameObject go = new GameObject("[PlacementVisualManager]");
-                Instance = go.AddComponent<PlacementVisualManager>();
-                DontDestroyOnLoad(go);
-            }
             Instance = this;
+            DontDestroyOnLoad(gameObject);
         }
     }
 }
