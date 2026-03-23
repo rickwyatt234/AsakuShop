@@ -6,29 +6,20 @@ using AsakuShop.Core;
 
 namespace AsakuShop.Storage
 {
-    public class ShelfComponent : MonoBehaviour, IInteractable
+    public class ShelfComponent : MonoBehaviour, IInteractable, IShelfHoldable
     {
-        // Unique identifier for this shelf (could be used for saving/loading)
         [SerializeField] private string shelfID = "Shelf001";
         public string DisplayName = "Shelf";
 
+        [SerializeField] private Vector3 heldOffset = new Vector3(0, 0.5f, 0);
+        [SerializeField] private Quaternion heldRotation = Quaternion.Euler(90, 0, 0);
 
-        // Held item position and rotation configuration
-        public Vector3 heldOffset = new Vector3(0, 0.5f, 0);
-        public Quaternion heldRotation = Quaternion.Euler(90, 0, 0);
-
-
-        // Preferred Storage Type for food spoilage purposes (e.g. Dry, Refrigerated, Frozen)
         [SerializeField] private PreferredStorageType storageType = PreferredStorageType.Dry;
         public PreferredStorageType StorageType => storageType;
 
-
-        // Stocking constraints
-        public StockingSize[] allowedStockingSizes = new StockingSize[] 
+        public StockingSize[] allowedStockingSizes = new StockingSize[]
                                { StockingSize.Small, StockingSize.Medium, StockingSize.Large };
 
-
-        // Slot configuration
         public int slotColumns = 4;
         public int slotRows = 3;
         public float slotSpacingX = 0.3f;
@@ -38,21 +29,26 @@ namespace AsakuShop.Storage
         public Vector3 GetStockingRotation() => stockingRotation;
         public Vector3 GetStockingOffset() => stockingOffset;
 
-
-        // Mounting and browsing configuration
-        public float mountOffsetDistance = 0.5f; // How far from the wall the shelf should be when mounted
-        public float browsingDistance = 2f; // Max distance for NPCs to interact with shelf
+        public float mountOffsetDistance = 0.5f;
+        public float browsingDistance = 2f;
         [SerializeField] private Vector3 slotStartOffset = new Vector3(-0.9f, 0.9f, 0);
         [SerializeField] private Vector3 rotationOffset = Vector3.zero;
+
+        // IHoldable / IShelfHoldable implementation
+        string IHoldable.DisplayName => DisplayName;
+        Vector3 IHoldable.HeldOffset => heldOffset;
+        Quaternion IHoldable.HeldRotation => heldRotation;
+        GameObject IHoldable.GameObject => gameObject;
+        Vector3 IShelfHoldable.RotationOffset => rotationOffset;
+        float IShelfHoldable.MountOffsetDistance => mountOffsetDistance;
+
+        // Keep public accessor for code within Storage namespace that uses RotationOffset directly
         public Vector3 RotationOffset => rotationOffset;
 
-
-        //Items currently on the shelf and their slot assignments
         private List<ItemInstance> items = new();
         public List<ItemInstance> Items => items;
         public Dictionary<ItemInstance, int> itemToSlotIndex = new();
 
-        //References
         private IPickupTarget pickupTarget;
         private ShelfInteraction shelfInteraction;
 
@@ -63,7 +59,7 @@ namespace AsakuShop.Storage
         {
             pickupTarget = PlayerService.PickupTarget;
             if (pickupTarget == null)
-                Debug.LogError("[ItemPickup] No IPickupTarget registered in PlayerService. Make sure PlayerHands is in the scene.");
+                Debug.LogError("[ShelfComponent] No IPickupTarget registered in PlayerService. Make sure PlayerHands is in the scene.");
             shelfInteraction = GetComponent<ShelfInteraction>();
         }
 #endregion
@@ -72,26 +68,21 @@ namespace AsakuShop.Storage
 #region IInteractable Implementation
         public void OnInteract()
         {
-            // If shelf is wall-mounted, the player is holding something already, or 
-            // the inventory UI is already open, do not allow interaction
-            if (InventoryState.IsOpen || IsShelfWallMounted(this) || playerHands.IsHoldingInteractable)
+            if (pickupTarget == null) return;
+            if (InventoryState.IsOpen || IsShelfWallMounted(this) || pickupTarget.IsHoldingInteractable)
                 return;
 
-            else
-            {
-                pickupTarget.TryPickupInteractable(gameObject)
-            }
+            pickupTarget.TryPickupInteractable(gameObject);
         }
+
         public void OnExamine()
         {
+            if (pickupTarget == null) return;
             if (InventoryState.IsOpen || !IsShelfWallMounted(this))
                 return;
 
-            //Pick up shelf
-            //This is to prevent the normal interaction button from picking up the shelf accidentally
-            pickupTarget.TryPickupInteractable(gameObject)
+            pickupTarget.TryPickupInteractable(gameObject);
 
-            //Keep items visually on the shelf while it's being held by parenting them to the shelf object
             List<ItemInstance> stockedItems = shelfInteraction.GetAllItems();
             if (stockedItems.Count > 0)
             {
@@ -105,7 +96,7 @@ namespace AsakuShop.Storage
                     }
                 }
             }
-        }        
+        }
 #endregion
 
         public bool IsShelfWallMounted(ShelfComponent shelf)
@@ -129,12 +120,13 @@ namespace AsakuShop.Storage
                 Ray wallCheckRay = new Ray(shelf.transform.position, direction);
                 if (Physics.Raycast(wallCheckRay, out RaycastHit hit, 2f) &&
                     hit.collider.gameObject.layer == LayerMask.NameToLayer("Wall"))
-                {
                     return true;
-                }
             }
-
             return false;
         }
+
+        public bool TryAddItem(ItemInstance item) => shelfInteraction != null && shelfInteraction.TryAddItem(item);
+        public bool TryRemoveItem(ItemInstance item) => shelfInteraction != null && shelfInteraction.TryRemoveItem(item);
+        public Vector3 GetSlotPosition(ItemInstance item) => shelfInteraction != null ? shelfInteraction.GetSlotPosition(item) : Vector3.zero;
     }
 }
