@@ -43,13 +43,8 @@ namespace AsakuShop.Items
 
         public void OnExamine()
         {
-            if (ItemInstance != null)
-                CoreEvents.RaiseExamineRequested(ItemInstance);
-    
-            if (ItemInstance != null && ItemInstance.IsOnAShelf)
-            {
-                // Set price from the shelf
-            }
+            // Examination of loose or shelved items via the world raycast is not allowed.
+            // The examine UI is only opened by PlayerHands when the item is actively held.
         }
 #endregion
     }

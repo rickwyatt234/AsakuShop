@@ -29,6 +29,10 @@ namespace AsakuShop.UI
         private GameObject examinedItemDisplay;
         private GamePhase phaseBeforeExamination;
         private bool previousExamineState = false;
+        // Accumulated yaw (Y) and pitch (X) driven by mouse input; rebuilt into a fresh
+        // Quaternion each frame so rotations are always predictable regardless of prior orientation.
+        private float examinationYaw;
+        private float examinationPitch;
         [HideInInspector] public IInputManager input;
 
 #region Singleton
@@ -87,6 +91,8 @@ namespace AsakuShop.UI
             }
             currentExaminedItem = item;
             phaseBeforeExamination = GameStateController.Instance.CurrentPhase;
+            examinationYaw   = 0f;
+            examinationPitch = 0f; // Reset rotation for each new examination
 
             // Transition to examination phase (clock will still tick, pause still works)
             GameStateController.Instance.RequestTransition(GamePhase.ItemExamination);
@@ -214,12 +220,15 @@ namespace AsakuShop.UI
             
             if (rotationInput.sqrMagnitude > 0.01f && examinedItemDisplay != null)
             {
-                // Rotate based on X (horizontal) and Y (vertical) input
-                float rotationX = -rotationInput.x * rotationSpeed * Time.deltaTime;
-                float rotationY = -rotationInput.y * rotationSpeed * Time.deltaTime;
+                // Accumulate yaw (horizontal) and pitch (vertical) as plain floats.
+                // Building the Quaternion fresh every frame from these two scalars avoids
+                // gimbal-lock and orientation-dependent weirdness that comes from chaining
+                // sequential Rotate() calls on an already-rotated object.
+                examinationYaw   += rotationInput.x * rotationSpeed * Time.deltaTime;
+                examinationPitch -= rotationInput.y * rotationSpeed * Time.deltaTime; // inverted so mouse-up tilts the item up
 
-                examinedItemDisplay.transform.Rotate(Vector3.up, rotationX, Space.World);
-                examinedItemDisplay.transform.Rotate(Vector3.right, -rotationY, Space.World);
+                examinedItemDisplay.transform.localRotation =
+                    Quaternion.Euler(examinationPitch, examinationYaw, 0f);
             }
 
             bool currentExamineState = input.examine;

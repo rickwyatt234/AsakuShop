@@ -57,6 +57,12 @@ namespace AsakuShop.Storage
 
         public void OnExamine()
         {
+            // If the player is holding something, the examine press is intended for stocking/storing
+            // into this container — PlayerHands handles that. Do NOT also open the inventory UI.
+            IPickupTarget pickupTarget = PlayerService.PickupTarget;
+            if (pickupTarget != null && pickupTarget.IsHoldingInteractable)
+                return;
+
             if (!InventoryState.IsOpen)
                 OpenInventory();
         }

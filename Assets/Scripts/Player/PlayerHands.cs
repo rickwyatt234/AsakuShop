@@ -37,6 +37,9 @@ namespace AsakuShop.Player
         private const float STOCKING_JUMP_POWER  = 0.3f; // Arc height for DOLocalJump
         private const float STOCKING_ANIM_DURATION = 0.4f; // Duration (seconds) for jump and rotate tweens
 
+        // DOTween pickup animation settings
+        private const float PICKUP_ANIM_DURATION = 0.3f; // Duration (seconds) for pickup arc into hands
+
         private Vector3 previewRotation = Vector3.zero;
 
         [HideInInspector] public IInputManager input;
@@ -203,14 +206,20 @@ namespace AsakuShop.Player
 
                 heldItemVisual = shelf.GameObject;
                 heldItemVisualTransform = heldItemVisual.transform;
+                // Parent to camera — Unity preserves world position, giving us the correct start local pos.
                 heldItemVisualTransform.SetParent(playerCamera);
-                heldItemVisualTransform.localPosition = shelf.HeldOffset;
-                heldItemVisualTransform.localRotation = shelf.HeldRotation;
 
                 Rigidbody rb = heldItemVisual.GetComponent<Rigidbody>();
                 if (rb != null) rb.isKinematic = true;
                 foreach (Collider col in heldItemVisual.GetComponentsInChildren<Collider>())
                     col.enabled = false;
+
+                // DOLocalMove animates from the shelf's current local position to the held offset.
+                heldItemVisualTransform.DOLocalMove(shelf.HeldOffset, PICKUP_ANIM_DURATION)
+                    .SetEase(Ease.OutCubic);
+                // DOLocalRotate smoothly orients the shelf to the held rotation.
+                heldItemVisualTransform.DOLocalRotate(shelf.HeldRotation.eulerAngles, PICKUP_ANIM_DURATION)
+                    .SetEase(Ease.OutCubic);
                 //Debug.Log($"Picked up: {shelf.DisplayName}");
             }
             else if (container != null)
@@ -221,14 +230,20 @@ namespace AsakuShop.Player
 
                 heldItemVisual = container.GameObject;
                 heldItemVisualTransform = heldItemVisual.transform;
+                // Parent to camera — Unity preserves world position, giving us the correct start local pos.
                 heldItemVisualTransform.SetParent(playerCamera);
-                heldItemVisualTransform.localPosition = container.HeldOffset;
-                heldItemVisualTransform.localRotation = container.HeldRotation;
 
                 Rigidbody rb = heldItemVisual.GetComponent<Rigidbody>();
                 if (rb != null) rb.isKinematic = true;
                 foreach (Collider col in heldItemVisual.GetComponentsInChildren<Collider>())
                     col.enabled = false;
+
+                // DOLocalMove animates from the container's current local position to the held offset.
+                heldItemVisualTransform.DOLocalMove(container.HeldOffset, PICKUP_ANIM_DURATION)
+                    .SetEase(Ease.OutCubic);
+                // DOLocalRotate smoothly orients the container to the held rotation.
+                heldItemVisualTransform.DOLocalRotate(container.HeldRotation.eulerAngles, PICKUP_ANIM_DURATION)
+                    .SetEase(Ease.OutCubic);
                 //Debug.Log($"Picked up storage container: {container.DisplayName}");
             }
             else
@@ -291,10 +306,10 @@ namespace AsakuShop.Player
                 }
 
                 // Otherwise, examine the held item
-                if (heldItemPickup != null)
+                if (heldItem != null)
                 {
                     //Debug.Log($"Examining held item: {heldItem.Definition.DisplayName}");
-                    heldItemPickup.OnExamine();
+                    CoreEvents.RaiseExamineRequested(heldItem);
                 }
             }
         }
@@ -674,17 +689,38 @@ namespace AsakuShop.Player
             if (heldItemVisual != null)
                 Destroy(heldItemVisual);
 
-            heldItemVisual = Instantiate(heldItem.Definition.WorldPrefab);
+            // Spawn at the pickup's world position so the DOTween arc starts from there.
+            Vector3 spawnWorldPos = heldItemPickup != null
+                ? heldItemPickup.transform.position
+                : playerCamera.position + playerCamera.forward;
+            Quaternion spawnWorldRot = heldItemPickup != null
+                ? heldItemPickup.transform.rotation
+                : Quaternion.identity;
+
+            heldItemVisual = Instantiate(heldItem.Definition.WorldPrefab, spawnWorldPos, spawnWorldRot);
             heldItemVisualTransform = heldItemVisual.transform;
+            // Parent to camera — Unity converts the world pos/rot to local space automatically.
             heldItemVisualTransform.SetParent(playerCamera);
-            heldItemVisualTransform.localPosition = new Vector3(0.5f, -0.5f, 1f);
-            heldItemVisualTransform.localRotation = Quaternion.Euler(0, 90f, 0);
 
             Rigidbody rb = heldItemVisual.GetComponent<Rigidbody>();
             if (rb != null) Destroy(rb);
 
             foreach (Collider col in heldItemVisual.GetComponentsInChildren<Collider>())
                 col.enabled = false;
+
+            // DOLocalJump animates from the current local position (world spawn pos in camera space)
+            // to the held position, with a small arc for a natural "picked up" feel.
+            // Parameters: (endValue, jumpPower, numJumps, duration)
+            heldItemVisualTransform.DOLocalJump(
+                new Vector3(0.5f, -0.5f, 1f),
+                0.15f, 1, PICKUP_ANIM_DURATION)
+                .SetEase(Ease.OutCubic);
+
+            // DOLocalRotate smoothly spins the item to the standard held orientation.
+            heldItemVisualTransform.DOLocalRotate(
+                Quaternion.Euler(0, 90f, 0).eulerAngles,
+                PICKUP_ANIM_DURATION)
+                .SetEase(Ease.OutCubic);
         }
 
 
