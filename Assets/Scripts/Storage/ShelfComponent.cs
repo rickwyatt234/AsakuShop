@@ -81,9 +81,10 @@ namespace AsakuShop.Storage
 
         public void OnExamine()
         {
-            // Wall-mounted shelves are stocked via PlayerHands; do not pick them up here.
+            // Pressing Examine on any shelf (including wall-mounted) with empty hands picks it up.
+            // Stocked items are ejected inside TryPickupInteractable before the shelf is held.
             if (pickupTarget == null) return;
-            if (InventoryState.IsOpen || IsShelfWallMounted(this) || pickupTarget.IsHoldingInteractable)
+            if (InventoryState.IsOpen || pickupTarget.IsHoldingInteractable)
                 return;
 
             pickupTarget.TryPickupInteractable(gameObject);
