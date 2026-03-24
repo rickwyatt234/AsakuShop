@@ -1,3 +1,4 @@
+
 namespace AsakuShop.Core
 {
     /// Lightweight service locator for the player's pickup target.

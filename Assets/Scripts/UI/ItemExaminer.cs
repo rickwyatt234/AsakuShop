@@ -215,8 +215,8 @@ namespace AsakuShop.UI
             if (rotationInput.sqrMagnitude > 0.01f && examinedItemDisplay != null)
             {
                 // Rotate based on X (horizontal) and Y (vertical) input
-                float rotationX = rotationInput.x * rotationSpeed * Time.deltaTime;
-                float rotationY = rotationInput.y * rotationSpeed * Time.deltaTime;
+                float rotationX = -rotationInput.x * rotationSpeed * Time.deltaTime;
+                float rotationY = -rotationInput.y * rotationSpeed * Time.deltaTime;
 
                 examinedItemDisplay.transform.Rotate(Vector3.up, rotationX, Space.World);
                 examinedItemDisplay.transform.Rotate(Vector3.right, -rotationY, Space.World);

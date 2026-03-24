@@ -1,0 +1,19 @@
+{
+    "name": "AsakuShop.UI",
+    "rootNamespace": "AsakuShop.UI",
+    "references": [
+        "AsakuShop.Core",
+        "AsakuShop.Input",
+        "AsakuShop.Items",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

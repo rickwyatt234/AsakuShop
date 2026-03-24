@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using AsakuShop.Core;
 
 namespace AsakuShop.Input
 {

@@ -11,6 +11,12 @@ namespace AsakuShop.Items
         public void Initialize(ItemInstance itemInstance)
         {
             ItemInstance = itemInstance;
+
+            //Create rigidbody and collider for interaction
+            Rigidbody rb = gameObject.AddComponent<Rigidbody>();
+            rb.useGravity = true;
+            MeshCollider collider = gameObject.AddComponent<MeshCollider>();
+            collider.convex = true; // Convex is required for MeshColliders on non-static objects
         }
 
         private void Start()
@@ -29,9 +35,10 @@ namespace AsakuShop.Items
 
         public void OnExamine()
         {
-            if (pickupTarget != null && pickupTarget.GetHeldInteractable() == this)
+            if (ItemInstance != null)
                 CoreEvents.RaiseExamineRequested(ItemInstance);
-            else if (ItemInstance != null && ItemInstance.IsOnAShelf)
+    
+            if (ItemInstance != null && ItemInstance.IsOnAShelf)
             {
                 // Set price from the shelf
             }

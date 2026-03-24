@@ -16,19 +16,10 @@ namespace AsakuShop.Items
         public string ItemId;
 
         //Numeric encoding of ItemInstance.CurrentGrade via ItemGradeExtensions.ToNumeric
-        public int GradeValue;
+        public int CurrentGrade;
 
         //Preserved ItemInstance.PurchasePrice
-        public float PurchasePrice;
-
-        //GameTime.DayIndex of the acquisition time.
-        public int AcquiredDayIndex;
-
-        //GameTime.Hour of the acquisition time.
-        public int AcquiredHour;
-
-        //GameTime.Minuteof the acquisition time.
-        public int AcquiredMinute;
+        public float CurrentPrice;
 
         /// Creates a ItemSaveData snapshot from a live ItemInstance
         public static ItemSaveData From(ItemInstance instance)
@@ -39,11 +30,8 @@ namespace AsakuShop.Items
             {
                 InstanceId       = instance.InstanceId,
                 ItemId           = instance.Definition.ItemId,
-                GradeValue       = instance.CurrentGrade.ToNumeric(),
-                PurchasePrice    = instance.PurchasePrice,
-                AcquiredDayIndex = instance.AcquiredTime.DayIndex,
-                AcquiredHour     = instance.AcquiredTime.Hour,
-                AcquiredMinute   = instance.AcquiredTime.Minute,
+                CurrentGrade     = instance.CurrentGrade.ToNumeric(),
+                CurrentPrice     = instance.CurrentPrice,
             };
         }
 
@@ -69,18 +57,13 @@ namespace AsakuShop.Items
                 return null;
             }
 
-            GameTime acquiredTime = GameTime.FromMinutes(
-                data.AcquiredDayIndex,
-                data.AcquiredHour * 60 + data.AcquiredMinute);
-
-            ItemGrade grade = ItemGradeExtensions.FromNumeric(data.GradeValue);
+            ItemGrade grade = ItemGradeExtensions.FromNumeric(data.CurrentGrade);
 
             return new ItemInstance(
                 data.InstanceId,
                 definition,
                 grade,
-                data.PurchasePrice,
-                acquiredTime);
+                data.CurrentPrice);
         }
     }
 }

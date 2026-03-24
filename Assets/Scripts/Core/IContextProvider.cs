@@ -12,5 +12,6 @@ namespace AsakuShop.Core
         // The IPickupTarget parameter lets the implementer inspect what is being held
         // (e.g. "Press [E] to stock" only if the player is holding an item, not a shelf).
         string GetHeldHint(IPickupTarget holder);
-    }
+    }   
 }
+ 

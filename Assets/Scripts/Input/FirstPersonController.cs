@@ -210,6 +210,12 @@ namespace AsakuShop.Input
     // Detect interactables in front of the player and handle Context Hint UI
     private void DetectInteractable()
         {
+            if (player != null && player.IsHoldingInteractable)
+            {
+                CoreEvents.RaiseContextHintHideRequested();
+                return;
+            }
+            
             //Create Raycast from center of screen to detect interactables
             Ray ray = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
 

@@ -124,15 +124,19 @@ namespace AsakuShop.UI
                 case ItemPickup itemPickup:
                     // Check if player is looking at a shelf within stocking range
                     Ray ray = new Ray(Camera.main.transform.position, Camera.main.transform.forward);
-                    if (Physics.Raycast(ray, out RaycastHit hit, 3f))
+                    if (Physics.Raycast(ray, out RaycastHit hitShelf, 3f))
                     {
-                        IShelfHoldable shelfHoldable = hit.collider.GetComponent<IShelfHoldable>();
+                        IShelfHoldable shelfHoldable = hitShelf.collider.GetComponent<IShelfHoldable>();
                         if (shelfHoldable != null)
                             return $"[{interactKey}]: Stock\n" +
                                    $"[{examineKey}]: Examine\n" +
                                    $"[{rotateKey}]: Rotate Vertically\n" +
                                    $"[{rotateModifierKey}] + [{rotateKey}]: Rotate Horizontally";
-                        IHoldable container = hit.collider.GetComponent<IHoldable>();
+                    }
+                    if (Physics.Raycast(ray, out RaycastHit hitContainer, 3f))
+                    {
+                        // Check if looking at a valid container (e.g. storage unit) to drop into
+                        IHoldable container = hitContainer.collider.GetComponent<IHoldable>();
                         if (container != null && !(container is IShelfHoldable))
                             return $"[{interactKey}]: Drop\n" +
                                    $"[{examineKey}]: Store\n" +

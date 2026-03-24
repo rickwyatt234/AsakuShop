@@ -1,5 +1,4 @@
 using System;
-using AsakuShop.Core;
 
 namespace AsakuShop.Items
 {

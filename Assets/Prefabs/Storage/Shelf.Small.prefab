@@ -106,21 +106,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9be62d3847a0e7942aa614a8a7cff005, type: 3}
   m_Name: 
   m_EditorClassIdentifier: AsakuShop.Storage::AsakuShop.Storage.ShelfComponent
+  shelfID: Shelf001
+  DisplayName: Shelf
+  heldOffset: {x: 0.5, y: -1, z: 0.2}
+  heldRotation: {x: 0, y: 0.70710677, z: 0, w: 0.70710677}
   storageType: 0
-  minItemSize: 0
-  maxItemSize: 2
+  allowedStockingSizes: 000000000100000002000000
   slotColumns: 4
   slotRows: 4
   slotSpacingX: 0.275
   slotSpacingY: 0.525
   stockingRotation: {x: -90, y: 0, z: 0}
-  stockingOffset: {x: 0, y: 0.35, z: 0}
+  stockingOffset: {x: 0.25, y: 0.35, z: 0.25}
   mountOffsetDistance: 0.5
-  slotStartOffset: {x: -0.45, y: 0.8, z: 0}
-  shelfID: Shelf001
-  shelfName: Shelf
-  rotationOffset: {x: -90, y: -90, z: 0}
   browsingDistance: 0.5
+  slotStartOffset: {x: 0, y: 0, z: 0}
+  rotationOffset: {x: -90, y: -90, z: 0}
 --- !u!114 &143004073692136189
 MonoBehaviour:
   m_ObjectHideFlags: 0
