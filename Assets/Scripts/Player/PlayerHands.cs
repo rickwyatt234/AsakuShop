@@ -4,6 +4,8 @@ using System.Collections;
 using System.Collections.Generic;
 using AsakuShop.Items;
 using AsakuShop.Core;
+using AsakuShop.Storage;
+using DG.Tweening;
 
 
 namespace AsakuShop.Player
@@ -30,6 +32,13 @@ namespace AsakuShop.Player
         private GameObject recentlyDroppedObject = null;
         private float dropIgnoreTimer = 0f;
         private const float DROP_IGNORE_DURATION = 0.15f;
+
+        // DOTween stocking animation settings
+        private const float STOCKING_JUMP_POWER  = 0.3f; // Arc height for DOLocalJump
+        private const float STOCKING_ANIM_DURATION = 0.4f; // Duration (seconds) for jump and rotate tweens
+
+        // DOTween pickup animation settings
+        private const float PICKUP_ANIM_DURATION = 0.3f; // Duration (seconds) for pickup arc into hands
 
         private Vector3 previewRotation = Vector3.zero;
 
@@ -183,18 +192,34 @@ namespace AsakuShop.Player
             {
                 //Debug.Log("[PICKUP] Picking up shelf");
 
+                // Before holding the shelf, eject any stocked items so they fall to the floor.
+                ShelfComponent shelfComponent = shelf.GameObject.GetComponent<ShelfComponent>();
+                if (shelfComponent != null)
+                    shelfComponent.EjectAllStockedItems();
+
+                // Also clear the shelf's logical storage data so the shelf starts empty.
+                IStorageUnit storageUnit = shelf.GameObject.GetComponent<IStorageUnit>();
+                if (storageUnit != null)
+                    storageUnit.ClearAllItems();
+
                 heldShelf = shelf;
 
                 heldItemVisual = shelf.GameObject;
                 heldItemVisualTransform = heldItemVisual.transform;
+                // Parent to camera — Unity preserves world position, giving us the correct start local pos.
                 heldItemVisualTransform.SetParent(playerCamera);
-                heldItemVisualTransform.localPosition = shelf.HeldOffset;
-                heldItemVisualTransform.localRotation = shelf.HeldRotation;
 
                 Rigidbody rb = heldItemVisual.GetComponent<Rigidbody>();
                 if (rb != null) rb.isKinematic = true;
                 foreach (Collider col in heldItemVisual.GetComponentsInChildren<Collider>())
                     col.enabled = false;
+
+                // DOLocalMove animates from the shelf's current local position to the held offset.
+                heldItemVisualTransform.DOLocalMove(shelf.HeldOffset, PICKUP_ANIM_DURATION)
+                    .SetEase(Ease.OutCubic);
+                // DOLocalRotate smoothly orients the shelf to the held rotation.
+                heldItemVisualTransform.DOLocalRotate(shelf.HeldRotation.eulerAngles, PICKUP_ANIM_DURATION)
+                    .SetEase(Ease.OutCubic);
                 //Debug.Log($"Picked up: {shelf.DisplayName}");
             }
             else if (container != null)
@@ -205,14 +230,20 @@ namespace AsakuShop.Player
 
                 heldItemVisual = container.GameObject;
                 heldItemVisualTransform = heldItemVisual.transform;
+                // Parent to camera — Unity preserves world position, giving us the correct start local pos.
                 heldItemVisualTransform.SetParent(playerCamera);
-                heldItemVisualTransform.localPosition = container.HeldOffset;
-                heldItemVisualTransform.localRotation = container.HeldRotation;
 
                 Rigidbody rb = heldItemVisual.GetComponent<Rigidbody>();
                 if (rb != null) rb.isKinematic = true;
                 foreach (Collider col in heldItemVisual.GetComponentsInChildren<Collider>())
                     col.enabled = false;
+
+                // DOLocalMove animates from the container's current local position to the held offset.
+                heldItemVisualTransform.DOLocalMove(container.HeldOffset, PICKUP_ANIM_DURATION)
+                    .SetEase(Ease.OutCubic);
+                // DOLocalRotate smoothly orients the container to the held rotation.
+                heldItemVisualTransform.DOLocalRotate(container.HeldRotation.eulerAngles, PICKUP_ANIM_DURATION)
+                    .SetEase(Ease.OutCubic);
                 //Debug.Log($"Picked up storage container: {container.DisplayName}");
             }
             else
@@ -275,10 +306,10 @@ namespace AsakuShop.Player
                 }
 
                 // Otherwise, examine the held item
-                if (heldItemPickup != null)
+                if (heldItem != null)
                 {
                     //Debug.Log($"Examining held item: {heldItem.Definition.DisplayName}");
-                    heldItemPickup.OnExamine();
+                    CoreEvents.RaiseExamineRequested(heldItem);
                 }
             }
         }
@@ -423,53 +454,109 @@ namespace AsakuShop.Player
 
         private void TryStockItemOnShelf(IShelfHoldable shelf)
         {
+            // Guard 1: both heldItem and shelf must be present.
             if (heldItem == null || shelf == null) return;
 
-            IStorageUnit storageUnit = shelf.GameObject.GetComponent<IStorageUnit>();
-            if (storageUnit == null || !storageUnit.TryAddItem(heldItem))
+            // Guard 2: the shelf must be wall-mounted — floor shelves are picked up, not stocked.
+            if (!IsShelfWallMounted(shelf))
             {
-                //Debug.Log($"Cannot stock {heldItem.Definition.DisplayName} on {shelf.DisplayName}");
+                Debug.Log("[STOCK] Cannot stock item on a non-wall-mounted shelf.");
                 return;
             }
 
-            //Debug.Log($"Stocked {heldItem.Definition.DisplayName} on {shelf.DisplayName}");
+            // Guard 3: shelf must expose IStorageUnit to register items.
+            IStorageUnit storageUnit = shelf.GameObject.GetComponent<IStorageUnit>();
+            if (storageUnit == null)
+            {
+                Debug.Log("[STOCK] Cannot stock item — no IStorageUnit found on shelf.");
+                return;
+            }
 
+            // Guard 4: shelf must expose IShelfLayout to compute slot positions.
             IShelfLayout shelfLayout = shelf.GameObject.GetComponent<IShelfLayout>();
-            Vector3 slotPos;
-            if (shelfLayout != null)
+            if (shelfLayout == null)
             {
-                Vector3 localOffset = shelfLayout.GetSlotPosition(heldItem) + shelfLayout.GetStockingOffset();
-                slotPos = shelf.GameObject.transform.TransformPoint(localOffset);
+                Debug.Log("[STOCK] Cannot stock item — no IShelfLayout found on shelf.");
+                return;
             }
-            else
-            {
-                slotPos = shelf.GameObject.transform.position;
-            }
-            Quaternion slotRot = shelfLayout != null
-                ? Quaternion.Euler(shelfLayout.GetStockingRotation())
-                : Quaternion.identity;
 
+            // Guard 5: verify the item can be stocked (size allowed, contiguous slots available).
+            if (!storageUnit.CanAddItem(heldItem))
+            {
+                Debug.Log("Cannot stock item — shelf is full or item size not supported.");
+                return;
+            }
+
+            // Register the item in the shelf's data; this assigns the anchor slot index.
             ItemInstance itemToStock = heldItem;
-            GameObject stockedVisual = Instantiate(itemToStock.Definition.WorldPrefab, slotPos, slotRot);
-
-            int itemLayer = LayerMask.NameToLayer("Item");
-            foreach (Transform t in stockedVisual.GetComponentsInChildren<Transform>())
-                t.gameObject.layer = itemLayer;
-
-            ItemPickup pickup = stockedVisual.AddComponent<ItemPickup>();
-            pickup.Initialize(itemToStock);
-
-            if (!stockedVisual.TryGetComponent<Collider>(out _))
+            if (!storageUnit.TryAddItem(itemToStock))
             {
-                MeshCollider col = stockedVisual.AddComponent<MeshCollider>();
-                col.convex = true;
+                Debug.Log("[STOCK] TryAddItem failed unexpectedly.");
+                return;
             }
 
-            if (!stockedVisual.TryGetComponent(out Rigidbody rb))
-                rb = stockedVisual.AddComponent<Rigidbody>();
-            rb.isKinematic = true;
+            // Step 6: compute the local-space slot position (now that the anchor is assigned).
+            // GetSlotPosition returns the centre of the item's occupied run in local shelf space.
+            Vector3 localOffset = shelfLayout.GetSlotPosition(itemToStock) + shelfLayout.GetStockingOffset();
+            Vector3 stockingRotationEuler = shelfLayout.GetStockingRotation();
 
-            ClearHeldState();
+            // Step 7: move the existing heldItemVisual — do NOT destroy it and create a new one.
+            GameObject visual = heldItemVisual;
+
+            // 7a. Parent the visual to the shelf transform so it travels with the shelf.
+            visual.transform.SetParent(shelf.GameObject.transform);
+
+            // Disable colliders during the tween to avoid physics interference.
+            Collider[] colliders = visual.GetComponentsInChildren<Collider>();
+            foreach (Collider col in colliders)
+                col.enabled = false;
+
+            // 7b. DOLocalJump moves the transform to a local-space target position while arcing upward.
+            //     Parameters: (Vector3 endValue, float jumpPower, int numJumps, float duration)
+            //     jumpPower controls arc height; numJumps = 1 means a single arc; duration is in seconds.
+            visual.transform.DOLocalJump(localOffset, STOCKING_JUMP_POWER, 1, STOCKING_ANIM_DURATION)
+                .OnComplete(() =>
+                {
+                    // Re-enable colliders once the tween finishes.
+                    foreach (Collider col in colliders)
+                        col.enabled = true;
+
+                    // Ensure a Rigidbody exists; keep it kinematic so the item stays put on the shelf.
+                    if (!visual.TryGetComponent(out Rigidbody rb))
+                        rb = visual.AddComponent<Rigidbody>();
+                    rb.isKinematic = true;
+                    rb.useGravity  = false;
+
+                    // Ensure ItemPickup exists and bind it to the item so customers can interact later.
+                    if (!visual.TryGetComponent(out ItemPickup pickup))
+                        pickup = visual.AddComponent<ItemPickup>();
+                    pickup.Initialize(itemToStock);
+
+                    // Mark the item as shelved so shelf-browsing and pricing logic can act on it.
+                    itemToStock.IsOnAShelf = true;
+
+                    // Set layer on the visual and all its children so raycasts find it correctly.
+                    int itemLayer = LayerMask.NameToLayer("Item");
+                    foreach (Transform t in visual.GetComponentsInChildren<Transform>(true))
+                        t.gameObject.layer = itemLayer;
+                });
+
+            // 7c. DOLocalRotate smoothly rotates the transform to the target local Euler angles over the given duration.
+            //     The rotation is applied in local space relative to the shelf, so items face the correct
+            //     direction regardless of the shelf's world orientation.
+            visual.transform.DOLocalRotate(stockingRotationEuler, STOCKING_ANIM_DURATION);
+
+            // Step 9: clear held-item state without destroying the visual (it is now parented to the shelf).
+            heldItem = null;
+            heldItemPickup = null;
+            heldItemVisual = null;
+            heldItemVisualTransform = null;
+            if (placementPreviewVisual != null)
+            {
+                Destroy(placementPreviewVisual);
+                placementPreviewVisual = null;
+            }
+            previewRotation = Vector3.zero;
         }
 
 
@@ -602,17 +689,39 @@ namespace AsakuShop.Player
             if (heldItemVisual != null)
                 Destroy(heldItemVisual);
 
-            heldItemVisual = Instantiate(heldItem.Definition.WorldPrefab);
+            // Spawn at the pickup's world position so the DOTween arc starts from there.
+            Vector3 spawnWorldPos = heldItemPickup != null
+                ? heldItemPickup.transform.position
+                : playerCamera.position + playerCamera.forward;
+            Quaternion spawnWorldRot = heldItemPickup != null
+                ? heldItemPickup.transform.rotation
+                : Quaternion.identity;
+
+            heldItemVisual = Instantiate(heldItem.Definition.WorldPrefab, spawnWorldPos, spawnWorldRot);
             heldItemVisualTransform = heldItemVisual.transform;
+            // Parent to camera — Unity converts the world pos/rot to local space automatically.
             heldItemVisualTransform.SetParent(playerCamera);
-            heldItemVisualTransform.localPosition = new Vector3(0.5f, -0.5f, 1f);
-            heldItemVisualTransform.localRotation = Quaternion.Euler(0, 90f, 0);
 
             Rigidbody rb = heldItemVisual.GetComponent<Rigidbody>();
             if (rb != null) Destroy(rb);
 
             foreach (Collider col in heldItemVisual.GetComponentsInChildren<Collider>())
                 col.enabled = false;
+
+            // DOLocalJump animates from the current local position (world spawn pos in camera space)
+            // to the held position, with a small arc for a natural "picked up" feel.
+            // Parameters: (endValue, jumpPower, numJumps, duration)
+            heldItemVisualTransform.DOLocalJump(
+                new Vector3(0.5f, -0.5f, 1f),
+                0.15f, 1, PICKUP_ANIM_DURATION)
+                .SetEase(Ease.OutCubic);
+
+            // DOLocalRotate smoothly spins the item to the standard held orientation.
+            // -90 on X corrects world prefabs that are authored laying on their side.
+            heldItemVisualTransform.DOLocalRotate(
+                Quaternion.Euler(-90f, 90f, 0f).eulerAngles,
+                PICKUP_ANIM_DURATION)
+                .SetEase(Ease.OutCubic);
         }
 
 
