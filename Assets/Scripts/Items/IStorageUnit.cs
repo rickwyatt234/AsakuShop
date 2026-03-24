@@ -11,7 +11,8 @@ namespace AsakuShop.Items
         List<ItemInstance> GetAllItems();
         int GetCapacity();
         int GetCurrentCount();
-        float GetCurrentWeight(); 
+        float GetCurrentWeight();
+        void ClearAllItems();
     }
 
 }

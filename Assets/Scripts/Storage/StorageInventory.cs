@@ -132,6 +132,12 @@ namespace AsakuShop.Storage
                 OnInventoryChanged?.Invoke();
             }
 
+            /// <summary>
+            /// Implements <see cref="IStorageUnit.ClearAllItems"/>.
+            /// Removes all items from the inventory and raises the change event.
+            /// </summary>
+            public void ClearAllItems() => Clear();
+
     }
     
 }

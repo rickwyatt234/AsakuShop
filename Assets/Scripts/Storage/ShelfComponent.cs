@@ -81,25 +81,12 @@ namespace AsakuShop.Storage
 
         public void OnExamine()
         {
+            // Wall-mounted shelves are stocked via PlayerHands; do not pick them up here.
             if (pickupTarget == null) return;
-            if (InventoryState.IsOpen || pickupTarget.IsHoldingInteractable)
+            if (InventoryState.IsOpen || IsShelfWallMounted(this) || pickupTarget.IsHoldingInteractable)
                 return;
 
             pickupTarget.TryPickupInteractable(gameObject);
-
-            List<ItemInstance> stockedItems = shelfInteraction.GetAllItems();
-            if (stockedItems.Count > 0)
-            {
-                foreach (var item in stockedItems)
-                {
-                    if (item != null && item.Definition.WorldPrefab != null)
-                    {
-                        GameObject itemVisual = Instantiate(item.Definition.WorldPrefab, transform);
-                        itemVisual.transform.localPosition = shelfInteraction.GetSlotPosition(item);
-                        itemVisual.transform.localRotation = Quaternion.Euler(GetStockingRotation());
-                    }
-                }
-            }
         }
 #endregion
 
@@ -132,5 +119,29 @@ namespace AsakuShop.Storage
         public bool TryAddItem(ItemInstance item) => shelfInteraction != null && shelfInteraction.TryAddItem(item);
         public bool TryRemoveItem(ItemInstance item) => shelfInteraction != null && shelfInteraction.TryRemoveItem(item);
         public Vector3 GetSlotPosition(ItemInstance item) => shelfInteraction != null ? shelfInteraction.GetSlotPosition(item) : Vector3.zero;
+
+        /// <summary>
+        /// Unparents every child GameObject that has an <see cref="ItemPickup"/> component and
+        /// enables physics on it (kinematic = false, useGravity = true, colliders re-enabled)
+        /// so the items fall to the floor when the shelf is picked up.
+        /// </summary>
+        public void EjectAllStockedItems()
+        {
+            // Collect all child ItemPickup references first to avoid modifying the hierarchy during iteration.
+            List<ItemPickup> pickups = new List<ItemPickup>(GetComponentsInChildren<ItemPickup>());
+            foreach (ItemPickup pickup in pickups)
+            {
+                pickup.transform.SetParent(null);
+
+                if (pickup.TryGetComponent(out Rigidbody rb))
+                {
+                    rb.isKinematic = false;
+                    rb.useGravity  = true;
+                }
+
+                foreach (Collider col in pickup.GetComponentsInChildren<Collider>())
+                    col.enabled = true;
+            }
+        }
     }
 }

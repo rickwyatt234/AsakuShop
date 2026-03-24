@@ -78,6 +78,12 @@ namespace AsakuShop.Storage
         public int GetCapacity() => inventory.GetCapacity();
         public int GetCurrentCount() => inventory.GetCurrentCount();
         public bool TryRemoveItem(ItemInstance item) => inventory.TryRemoveItem(item);
+
+        /// <summary>
+        /// Implements <see cref="IStorageUnit.ClearAllItems"/>.
+        /// Delegates to <see cref="StorageInventory.ClearAllItems"/>.
+        /// </summary>
+        public void ClearAllItems() => inventory.ClearAllItems();
 #endregion
 
 

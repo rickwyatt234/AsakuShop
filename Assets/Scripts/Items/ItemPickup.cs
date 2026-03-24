@@ -12,11 +12,19 @@ namespace AsakuShop.Items
         {
             ItemInstance = itemInstance;
 
-            //Create rigidbody and collider for interaction
-            Rigidbody rb = gameObject.AddComponent<Rigidbody>();
-            rb.useGravity = true;
-            MeshCollider collider = gameObject.AddComponent<MeshCollider>();
-            collider.convex = true; // Convex is required for MeshColliders on non-static objects
+            // Only add a Rigidbody if one doesn't already exist on this GameObject.
+            if (!gameObject.TryGetComponent<Rigidbody>(out _))
+            {
+                Rigidbody rb = gameObject.AddComponent<Rigidbody>();
+                rb.useGravity = true;
+            }
+
+            // Only add a MeshCollider if no Collider of any type already exists.
+            if (!gameObject.TryGetComponent<Collider>(out _))
+            {
+                MeshCollider collider = gameObject.AddComponent<MeshCollider>();
+                collider.convex = true; // Convex is required for MeshColliders on non-static objects
+            }
         }
 
         private void Start()
