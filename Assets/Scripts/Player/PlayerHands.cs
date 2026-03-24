@@ -717,8 +717,9 @@ namespace AsakuShop.Player
                 .SetEase(Ease.OutCubic);
 
             // DOLocalRotate smoothly spins the item to the standard held orientation.
+            // -90 on X corrects world prefabs that are authored laying on their side.
             heldItemVisualTransform.DOLocalRotate(
-                Quaternion.Euler(0, 90f, 0).eulerAngles,
+                Quaternion.Euler(-90f, 90f, 0f).eulerAngles,
                 PICKUP_ANIM_DURATION)
                 .SetEase(Ease.OutCubic);
         }
