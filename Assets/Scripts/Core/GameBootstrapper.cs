@@ -12,6 +12,8 @@ namespace AsakuShop.Core
         public static GameClock Clock { get; private set; }
         public static GameStateController State { get; private set; }
         public static SaveManager Save { get; private set; }
+        public static AsakuShop.Economy.EconomyManager Economy { get; private set; }
+        public static AsakuShop.Store.StoreManager Store { get; private set; }
 #endregion
 
 #region Unity methods
@@ -20,21 +22,23 @@ namespace AsakuShop.Core
             EnsureClock();
             EnsureStateController();
             EnsureSaveManager();
-            
+            EnsureEconomyManager();
+            EnsureStoreManager();
+
             if (State.Clock == null)
                 State.Clock = Clock;
 
             if (State.CurrentPhase == GamePhase.Boot)
                 State.RequestTransition(GamePhase.MainMenu);
 
-            //Lock mouse cursor
+            // Lock mouse cursor
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
         }
 
         private void Start()
         {
-            //Switch to main scene
+            // Switch to main scene
             SceneLoader.LoadScene("MainScene");
         }
 #endregion
@@ -52,7 +56,7 @@ namespace AsakuShop.Core
             Clock = go.AddComponent<GameClock>();
             // DontDestroyOnLoad is called inside GameClock.Awake().
         }
-        
+
         private static void EnsureStateController()
         {
             if (GameStateController.Instance != null)
@@ -65,7 +69,7 @@ namespace AsakuShop.Core
             State = go.AddComponent<GameStateController>();
             // DontDestroyOnLoad is called inside GameStateController.Awake().
         }
-        
+
         private static void EnsureSaveManager()
         {
             if (SaveManager.Instance != null)
@@ -77,6 +81,32 @@ namespace AsakuShop.Core
             GameObject go = new GameObject("[SaveManager]");
             Save = go.AddComponent<SaveManager>();
             // DontDestroyOnLoad is called inside SaveManager.Awake().
+        }
+
+        private static void EnsureEconomyManager()
+        {
+            if (AsakuShop.Economy.EconomyManager.Instance != null)
+            {
+                Economy = AsakuShop.Economy.EconomyManager.Instance;
+                return;
+            }
+
+            GameObject go = new GameObject("[EconomyManager]");
+            Economy = go.AddComponent<AsakuShop.Economy.EconomyManager>();
+            // DontDestroyOnLoad is called inside EconomyManager.Awake().
+        }
+
+        private static void EnsureStoreManager()
+        {
+            if (AsakuShop.Store.StoreManager.Instance != null)
+            {
+                Store = AsakuShop.Store.StoreManager.Instance;
+                return;
+            }
+
+            GameObject go = new GameObject("[StoreManager]");
+            Store = go.AddComponent<AsakuShop.Store.StoreManager>();
+            // DontDestroyOnLoad is called inside StoreManager.Awake().
         }
 #endregion
     }
