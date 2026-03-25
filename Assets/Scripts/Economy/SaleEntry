@@ -1,0 +1,42 @@
+using System;
+
+namespace AsakuShop.Economy
+{
+    /// <summary>
+    /// Immutable record of a single item sale transaction.
+    /// All prices are in whole yen (int). No fractions ever.
+    /// </summary>
+    [Serializable]
+    public class SaleEntry
+    {
+        /// <summary>ItemDefinition.ItemId of the item sold.</summary>
+        public string ItemId;
+
+        /// <summary>Human-readable display name at time of sale.</summary>
+        public string DisplayName;
+
+        /// <summary>The price the customer actually paid (yen).</summary>
+        public int SalePrice;
+
+        /// <summary>The item's wholesale/acquisition cost (yen), from ItemDefinition.BasePrice rounded.</summary>
+        public int BasePrice;
+
+        /// <summary>Profit margin on this single unit: SalePrice - BasePrice.</summary>
+        public int Margin => SalePrice - BasePrice;
+
+        /// <summary>Wall-clock timestamp when the sale occurred.</summary>
+        public string TimestampIso; // stored as ISO string for JsonUtility compat
+
+        public SaleEntry(string itemId, string displayName, int salePrice, int basePrice)
+        {
+            ItemId       = itemId;
+            DisplayName  = displayName;
+            SalePrice    = salePrice;
+            BasePrice    = basePrice;
+            TimestampIso = DateTime.Now.ToString("o");
+        }
+
+        public override string ToString()
+            => $"[{DisplayName} | Sold: ¥{SalePrice:N0} | Cost: ¥{BasePrice:N0} | Margin: ¥{Margin:N0}]";
+    }
+}
