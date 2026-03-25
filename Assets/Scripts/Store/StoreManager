@@ -1,0 +1,216 @@
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
+using UnityEngine.AI;
+using AsakuShop.Core;
+
+namespace AsakuShop.Store
+{
+    // Central manager for the convenience store. Tracks open/closed state,
+    // registered shelves and checkout counters, and spawns pedestrian/customer NPCs.
+    // NavMesh is baked in the Editor — this class never calls BuildNavMesh() at runtime.
+    public class StoreManager : MonoBehaviour
+    {
+        public static StoreManager Instance { get; private set; }
+
+        // ── Inspector ────────────────────────────────────────────────────────
+        [Header("Store Bounds (drawn as yellow gizmo)")]
+        [SerializeField] private Bounds storeBounds;
+
+        [Header("Customer Spawning")]
+        [SerializeField] private List<Transform> spawnPoints = new List<Transform>();
+        [SerializeField] private List<GameObject> customerPrefabs = new List<GameObject>();
+        [SerializeField] private int maxShoppers = 10;
+        [SerializeField] private float minSpawnInterval = 5f;
+        [SerializeField] private float maxSpawnInterval = 15f;
+
+        // ── State ────────────────────────────────────────────────────────────
+        public bool IsOpen { get; private set; }
+
+        // ── Shelves ──────────────────────────────────────────────────────────
+        private HashSet<MonoBehaviour> registeredShelves = new HashSet<MonoBehaviour>();
+
+        // ── Counters ─────────────────────────────────────────────────────────
+        private List<CheckoutCounter> checkoutCounters = new List<CheckoutCounter>();
+
+        // ── Active shoppers ───────────────────────────────────────────────────
+        private List<ICheckoutCustomer> activeShoppers = new List<ICheckoutCustomer>();
+
+        // ── Lifecycle ────────────────────────────────────────────────────────
+        private void Awake()
+        {
+            if (Instance != null && Instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+
+        private void Start()
+        {
+            if (customerPrefabs.Count > 0 && spawnPoints.Count > 0)
+                StartCoroutine(SpawnCustomers());
+            else
+                Debug.LogWarning("[StoreManager] No customer prefabs or spawn points assigned. Spawning disabled.");
+        }
+
+        // ── Open / Close ─────────────────────────────────────────────────────
+
+        //Toggles the store open/closed state and fires the appropriate CoreEvent.
+        public void ToggleOpen()
+        {
+            IsOpen = !IsOpen;
+
+            if (IsOpen)
+                CoreEvents.RaiseStoreOpened();
+            else
+            {
+                CoreEvents.RaiseStoreClosed();
+                // Ask all active shoppers to leave
+                foreach (var shopper in activeShoppers.ToList())
+                    (shopper as IAskToLeave)?.AskToLeave();
+            }
+        }
+
+        // ── Bounds ───────────────────────────────────────────────────────────
+
+        //Returns true if the world-space position is within the store bounds.
+        public bool IsWithinStore(Vector3 worldPosition) => storeBounds.Contains(worldPosition);
+
+        // ── Spawn points ─────────────────────────────────────────────────────
+
+        //Returns a random spawn point position (used for exits and pedestrian waypoints).
+        public Vector3 GetExitPoint()
+        {
+            if (spawnPoints.Count == 0) return transform.position;
+            return spawnPoints[Random.Range(0, spawnPoints.Count)].position;
+        }
+
+        // ── Shelf registry ───────────────────────────────────────────────────
+        /// Registers a shelf with StoreManager so customers can discover it.
+        /// Accepts any MonoBehaviour — expected to be a WallShelf in practice.
+        public void RegisterShelf(MonoBehaviour shelf)
+        {
+            if (shelf != null) registeredShelves.Add(shelf);
+        }
+
+        public void UnregisterShelf(MonoBehaviour shelf)
+        {
+            registeredShelves.Remove(shelf);
+        }
+
+        //Returns a random registered shelf, or null if none are registered.
+        public MonoBehaviour GetRandomShelf()
+        {
+            if (registeredShelves.Count == 0) return null;
+            int idx = Random.Range(0, registeredShelves.Count);
+            int i = 0;
+            foreach (var shelf in registeredShelves)
+            {
+                if (i == idx) return shelf;
+                i++;
+            }
+            return null;
+        }
+
+        // ── Counter registry ──────────────────────────────────────────────────
+
+        public void RegisterCounter(CheckoutCounter counter)
+        {
+            if (counter != null && !checkoutCounters.Contains(counter))
+                checkoutCounters.Add(counter);
+        }
+
+        //Returns the counter with the shortest customer queue.
+        public CheckoutCounter GetShortestQueueCounter()
+        {
+            if (checkoutCounters.Count == 0) return null;
+            return checkoutCounters.OrderBy(c => c.LiningCustomers.Count).First();
+        }
+
+        // ── Shopper tracking ──────────────────────────────────────────────────
+
+        public void RegisterShopper(ICheckoutCustomer shopper)
+        {
+            if (!activeShoppers.Contains(shopper)) activeShoppers.Add(shopper);
+        }
+
+        public void UnregisterShopper(ICheckoutCustomer shopper)
+        {
+            activeShoppers.Remove(shopper);
+        }
+
+        // ── Spawning ──────────────────────────────────────────────────────────
+
+        private IEnumerator SpawnCustomers()
+        {
+            while (true)
+            {
+                float wait = Random.Range(minSpawnInterval, maxSpawnInterval);
+                yield return new WaitForSeconds(wait);
+                SpawnOnePedestrian();
+            }
+        }
+
+        private void SpawnOnePedestrian()
+        {
+            if (customerPrefabs.Count == 0 || spawnPoints.Count == 0) return;
+
+            // Pick a random prefab and a random spawn point
+            GameObject prefab    = customerPrefabs[Random.Range(0, customerPrefabs.Count)];
+            Transform  spawnPt   = spawnPoints[Random.Range(0, spawnPoints.Count)];
+
+            GameObject go = Instantiate(prefab, spawnPt.position, spawnPt.rotation);
+
+            // If the customer wants to shop: only if store is open, below max shoppers, and there are shelves
+            bool wantsToShop = IsOpen
+                && activeShoppers.Count < maxShoppers
+                && registeredShelves.Count > 0;
+
+            // Set wantsToShop via interface or reflection — Customer component sets it publicly
+            var customerComp = go.GetComponent<ICheckoutCustomer>();
+
+            // Use reflection-free duck-typing: look for a "wantsToShop" public bool field via the IWantsToShop interface
+            var pedestrian = go.GetComponent<IPedestrianCustomer>();
+            if (pedestrian != null)
+                pedestrian.SetWantsToShop(wantsToShop);
+
+            if (wantsToShop && customerComp != null)
+                RegisterShopper(customerComp);
+        }
+
+#if UNITY_EDITOR
+        private void OnDrawGizmosSelected()
+        {
+            // Draw store bounds as a yellow wire cube
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawWireCube(storeBounds.center, storeBounds.size);
+
+            // Draw spawn points as cyan spheres
+            Gizmos.color = Color.cyan;
+            foreach (var sp in spawnPoints)
+            {
+                if (sp != null)
+                    Gizmos.DrawWireSphere(sp.position, 0.4f);
+            }
+        }
+#endif
+    }
+
+    // ── Helper interfaces (thin, in same file for simplicity) ─────────────────
+
+    //Allows StoreManager to call AskToLeave() on Customers without a direct type reference.
+    public interface IAskToLeave
+    {
+        void AskToLeave();
+    }
+
+    //Allows StoreManager to set the wantsToShop flag on Customer without a direct type reference.
+    public interface IPedestrianCustomer
+    {
+        void SetWantsToShop(bool value);
+    }
+}
