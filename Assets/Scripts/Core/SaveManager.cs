@@ -280,6 +280,24 @@ namespace AsakuShop.Core
                         case 'n':  sb.Append('\n'); break;
                         case 'r':  sb.Append('\r'); break;
                         case 't':  sb.Append('\t'); break;
+                        case 'u':
+                            // \uXXXX — consume the four hex digits and convert to a char.
+                            if (pos + 4 < s.Length)
+                            {
+                                string hex = s.Substring(pos + 1, 4);
+                                if (int.TryParse(hex,
+                                        System.Globalization.NumberStyles.HexNumber,
+                                        null, out int codePoint))
+                                {
+                                    sb.Append((char)codePoint);
+                                    pos += 4;
+                                }
+                                else
+                                {
+                                    sb.Append('u'); // malformed — keep literal
+                                }
+                            }
+                            break;
                         default:   sb.Append(s[pos]); break;
                     }
                 }

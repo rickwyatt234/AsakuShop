@@ -5,7 +5,7 @@ using AsakuShop.Core;
 
 namespace AsakuShop.Storage
 {
-    public class ShelfComponent : MonoBehaviour, IInteractable, IShelfHoldable
+    public class ShelfComponent : MonoBehaviour, IInteractable, IShelfHoldable, IShelfFrontPoint, IShelfItemProvider
     {
         [SerializeField] private string shelfID = "Shelf001";
         public string DisplayName = "Shelf";
@@ -125,6 +125,22 @@ namespace AsakuShop.Storage
         public bool TryAddItem(ItemInstance item) => shelfInteraction != null && shelfInteraction.TryAddItem(item);
         public bool TryRemoveItem(ItemInstance item) => shelfInteraction != null && shelfInteraction.TryRemoveItem(item);
         public Vector3 GetSlotPosition(ItemInstance item) => shelfInteraction != null ? shelfInteraction.GetSlotPosition(item) : Vector3.zero;
+
+        // IShelfFrontPoint — delegates to GetCustomerApproachPoint so Customer AI
+        // knows where to navigate before browsing this shelf.
+        public Vector3 FrontPoint => GetCustomerApproachPoint();
+
+        // IShelfItemProvider — lets Customer AI peek at and take the first item
+        // without importing AsakuShop.Storage.
+        public ItemInstance PeekItem() => items.Count > 0 ? items[0] : null;
+
+        public ItemInstance TakeItem()
+        {
+            if (items.Count == 0) return null;
+            ItemInstance item = items[0];
+            TryRemoveItem(item);
+            return item;
+        }
 
         // Unparents every child GameObject that has an ItemPickup component and
         // enables physics on it (kinematic = false, useGravity = true, colliders re-enabled)

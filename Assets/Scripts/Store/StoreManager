@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.SceneManagement;
 using AsakuShop.Core;
 using AsakuShop.Storage;
 
@@ -26,13 +27,14 @@ namespace AsakuShop.Store
         [SerializeField] private float minSpawnInterval = 5f;
         [SerializeField] private float maxSpawnInterval = 15f;
 
+        [Header("Pedestrian Wandering")]
+        [Tooltip("Optional waypoints pedestrians roam between. If empty, spawn points are used as a fallback.")]
+        [SerializeField] private List<Transform> wanderPoints = new List<Transform>();
+
         // ── State ────────────────────────────────────────────────────────────
         public bool IsOpen { get; private set; }
 
-        // ── Shelves ──────────────────────────────────────────────────────────
-        private HashSet<MonoBehaviour> registeredShelves = new HashSet<MonoBehaviour>();
-
-        // ── Typed shelf registry (wall-mounted shelves inside store bounds) ──
+        // ── Shelf registry (single source of truth) ──────────────────────────
         private readonly List<ShelfComponent> _registeredShelves = new();
         public IReadOnlyList<ShelfComponent> RegisteredShelves => _registeredShelves;
 
@@ -54,12 +56,31 @@ namespace AsakuShop.Store
             DontDestroyOnLoad(gameObject);
         }
 
+        private void OnEnable()
+        {
+            SceneManager.sceneUnloaded += OnSceneUnloaded;
+        }
+
+        private void OnDisable()
+        {
+            SceneManager.sceneUnloaded -= OnSceneUnloaded;
+        }
+
         private void Start()
         {
             if (customerPrefabs.Count > 0 && spawnPoints.Count > 0)
                 StartCoroutine(SpawnCustomers());
             else
                 Debug.LogWarning("[StoreManager] No customer prefabs or spawn points assigned. Spawning disabled.");
+        }
+
+        // Clears scene-object references when a scene is unloaded so DontDestroyOnLoad
+        // does not hold stale (destroyed) MonoBehaviour pointers.
+        private void OnSceneUnloaded(Scene scene)
+        {
+            _registeredShelves.Clear();
+            checkoutCounters.Clear();
+            activeShoppers.Clear();
         }
 
         // ── Open / Close ─────────────────────────────────────────────────────
@@ -88,13 +109,22 @@ namespace AsakuShop.Store
         //Returns true if the world-space position is within the store bounds.
         public bool IsWithinStore(Vector3 worldPosition) => storeBounds.Contains(worldPosition);
 
-        // ── Spawn points ─────────────────────────────────────────────────────
+        // ── Spawn / Wander points ─────────────────────────────────────────────
 
-        //Returns a random spawn point position (used for exits and pedestrian waypoints).
+        //Returns a random spawn point position (used for exits and pedestrian approach paths).
         public Vector3 GetExitPoint()
         {
             if (spawnPoints.Count == 0) return transform.position;
             return spawnPoints[Random.Range(0, spawnPoints.Count)].position;
+        }
+
+        // Returns a random wander waypoint for non-shopping pedestrians.
+        // Falls back to a spawn point if no dedicated wander points are configured.
+        public Vector3 GetWanderPoint()
+        {
+            List<Transform> pool = wanderPoints.Count > 0 ? wanderPoints : spawnPoints;
+            if (pool.Count == 0) return transform.position;
+            return pool[Random.Range(0, pool.Count)].position;
         }
 
         // ── Shelf registry ───────────────────────────────────────────────────
@@ -105,31 +135,27 @@ namespace AsakuShop.Store
         {
             if (shelf == null || _registeredShelves.Contains(shelf)) return;
             _registeredShelves.Add(shelf);
-            registeredShelves.Add(shelf); // HashSet silently ignores duplicates; safe if Customer previously added this shelf
             Debug.Log($"[StoreManager] Shelf registered: {shelf.name} ({_registeredShelves.Count} total)");
         }
 
         // Called by PlayerHands before the shelf is picked up off the wall.
-        // Removes the shelf from both the typed list and the browsing pool.
+        // Removes the shelf from the typed list and the browsing pool.
         public void UnregisterShelf(ShelfComponent shelf)
         {
             if (_registeredShelves.Remove(shelf))
-            {
-                registeredShelves.Remove(shelf);
                 Debug.Log($"[StoreManager] Shelf unregistered: {shelf.name} ({_registeredShelves.Count} remaining)");
-            }
         }
 
-        // Registers a shelf with StoreManager so customers can discover it.
-        // Accepts any MonoBehaviour — used by Customer AI for the claim/return cycle.
+        // MonoBehaviour overloads — used by the Customer AI claim/return cycle.
+        // Delegates to the typed overloads so the two registries never diverge.
         public void RegisterShelf(MonoBehaviour shelf)
         {
-            if (shelf != null) registeredShelves.Add(shelf);
+            if (shelf is ShelfComponent sc) RegisterShelf(sc);
         }
 
         public void UnregisterShelf(MonoBehaviour shelf)
         {
-            registeredShelves.Remove(shelf);
+            if (shelf is ShelfComponent sc) UnregisterShelf(sc);
         }
 
         // Returns all registered wall-mounted shelves that currently have at least one item.
@@ -143,18 +169,14 @@ namespace AsakuShop.Store
             return result;
         }
 
-        //Returns a random registered shelf from the browsing pool, or null if none are registered.
+        // Returns a random registered shelf from the browsing pool, or null if none are registered.
+        // Skips any destroyed/null entries (can occur if a scene is unloaded mid-frame).
         public MonoBehaviour GetRandomShelf()
         {
-            if (registeredShelves.Count == 0) return null;
-            int idx = Random.Range(0, registeredShelves.Count);
-            int i = 0;
-            foreach (var shelf in registeredShelves)
-            {
-                if (i == idx) return shelf;
-                i++;
-            }
-            return null;
+            // Remove any destroyed references before sampling.
+            _registeredShelves.RemoveAll(s => s == null);
+            if (_registeredShelves.Count == 0) return null;
+            return _registeredShelves[Random.Range(0, _registeredShelves.Count)];
         }
 
         // ── Counter registry ──────────────────────────────────────────────────
@@ -168,6 +190,7 @@ namespace AsakuShop.Store
         //Returns the counter with the shortest customer queue.
         public CheckoutCounter GetShortestQueueCounter()
         {
+            checkoutCounters.RemoveAll(c => c == null);
             if (checkoutCounters.Count == 0) return null;
             return checkoutCounters.OrderBy(c => c.LiningCustomers.Count).First();
         }
@@ -236,6 +259,14 @@ namespace AsakuShop.Store
             {
                 if (sp != null)
                     Gizmos.DrawWireSphere(sp.position, 0.4f);
+            }
+
+            // Draw wander points as green spheres
+            Gizmos.color = Color.green;
+            foreach (var wp in wanderPoints)
+            {
+                if (wp != null)
+                    Gizmos.DrawWireSphere(wp.position, 0.4f);
             }
         }
 #endif

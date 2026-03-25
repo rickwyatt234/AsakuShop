@@ -58,7 +58,8 @@ namespace AsakuShop.Player
         {
             playerCamera = Camera.main.transform;
             input = GetComponent<IInputManager>();
-            PlayerService.PickupTarget = this;
+            PlayerService.PickupTarget   = this;
+            PlayerService.InputManager   = input;
         }
 
         private void Update()

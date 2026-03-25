@@ -35,6 +35,11 @@ namespace AsakuShop.Store
         [Header("Monitor")]
         [SerializeField] private TextMeshPro monitorText;
 
+        [Header("Drag Handler & Snap Zones")]
+        [SerializeField] private CheckoutDragHandler checkoutDragHandler;
+        [SerializeField] private Transform           scanZoneTransform;
+        [SerializeField] private Transform           bagZoneTransform;
+
         // ── State ─────────────────────────────────────────────────────────────
         public enum State { Standby, Placing, Scanning, CashPay, CardPay }
         public State CurrentState { get; private set; }
@@ -54,6 +59,9 @@ namespace AsakuShop.Store
         // ── Checkout mode: is the player at the counter? ─────────────────────
         private bool playerAtCounter;
 
+        // Set to true by ConfirmPayment() when the player confirms via input action or UI.
+        private bool confirmPayment;
+
         // ── Yen denomination list (for CashPay reference) ────────────────────
         private static readonly int[] YenDenominations = { 10000, 5000, 1000, 500, 100, 50, 10, 5, 1 };
 
@@ -61,6 +69,14 @@ namespace AsakuShop.Store
         private void Awake()
         {
             UpdateMonitorText();
+
+            if (checkoutDragHandler != null)
+            {
+                if (scanZoneTransform == null)
+                    Debug.LogWarning("[CheckoutCounter] scanZoneTransform is not assigned. Items will scan immediately without snap animation.", this);
+                if (bagZoneTransform == null)
+                    Debug.LogWarning("[CheckoutCounter] bagZoneTransform is not assigned. Items will not snap to a bag zone after scanning.", this);
+            }
         }
 
         private void Start()
@@ -70,8 +86,8 @@ namespace AsakuShop.Store
 
         private void Update()
         {
-            if (playerAtCounter && Input.GetKeyDown(KeyCode.Escape))
-                ExitCheckoutMode();
+            // ESC handling removed — exit is now driven by the Cancel input action
+            // added to InputMappings (handled via IInputManager by the caller).
         }
 
         // ── IInteractable ────────────────────────────────────────────────────
@@ -92,9 +108,13 @@ namespace AsakuShop.Store
 
             if (cashierCamera != null) cashierCamera.gameObject.SetActive(true);
 
-            // TODO: snap player to cashierStandPoint and lock movement
-            // PlayerService.Instance.LockMovement(cashierStandPoint);
-            Debug.Log("[CheckoutCounter] Player entered checkout mode. Press ESC to exit.");
+            // Lock player movement while at the counter.
+            PlayerService.InputManager?.DisableMovementInput();
+
+            // Wire up the drag handler snap zones now that we are in checkout mode.
+            checkoutDragHandler?.Configure(scanZoneTransform, bagZoneTransform);
+
+            Debug.Log("[CheckoutCounter] Player entered checkout mode.");
         }
 
         private void ExitCheckoutMode()
@@ -103,8 +123,9 @@ namespace AsakuShop.Store
 
             if (cashierCamera != null) cashierCamera.gameObject.SetActive(false);
 
-            // TODO: release player movement lock
-            // PlayerService.Instance.UnlockMovement();
+            // Release player movement lock.
+            PlayerService.InputManager?.EnableMovementInput();
+
             Debug.Log("[CheckoutCounter] Player exited checkout mode.");
         }
 
@@ -174,7 +195,8 @@ namespace AsakuShop.Store
                 yield return new WaitForSeconds(jumpDur);
 
                 var checkoutItem = model.AddComponent<CheckoutItem>();
-                checkoutItem.Initialize(item, () => HandleScanning(checkoutItem));
+                checkoutItem.Initialize(item, () => HandleScanning(checkoutItem),
+                                        scanZoneTransform, bagZoneTransform);
                 beltItems.Add(checkoutItem);
             }
 
@@ -211,9 +233,12 @@ namespace AsakuShop.Store
 
             UpdateMonitorText();
 
-            // Wait for the player to press a confirm key (simplified — TODO: hook into UI buttons)
-            Debug.Log($"[CheckoutCounter] Awaiting payment confirmation. Total: ¥{totalPrice:N0}, Customer pays: ¥{customerPayment:N0}. Press [Return] to confirm.");
-            yield return new WaitUntil(() => Input.GetKeyDown(KeyCode.Return) || !playerAtCounter);
+            // Wait until the player confirms payment via the Confirm input action
+            // (wired up in InputMappings and handled by the caller / UI), or
+            // until the player leaves the counter (playerAtCounter becomes false).
+            confirmPayment = false;
+            Debug.Log($"[CheckoutCounter] Awaiting payment confirmation. Total: ¥{totalPrice:N0}, Customer pays: ¥{customerPayment:N0}.");
+            yield return new WaitUntil(() => confirmPayment || !playerAtCounter);
 
             // Finalize sale
             if (EconomyManager.Instance != null && currentCustomer != null)
@@ -228,9 +253,17 @@ namespace AsakuShop.Store
             currentCustomer = null;
             totalPrice      = 0;
             customerPayment = 0;
+            confirmPayment  = false;
 
             SetState(State.Standby);
         }
+
+        // Called externally (e.g. from an input action handler or UI button) to confirm
+        // the current payment and advance the checkout flow.
+        public void ConfirmPayment() => confirmPayment = true;
+
+        // Called externally (e.g. from the Cancel input action) to exit checkout mode.
+        public void RequestExit() => ExitCheckoutMode();
 
         // ── Helpers ───────────────────────────────────────────────────────────
 

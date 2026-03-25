@@ -20,13 +20,14 @@ namespace AsakuShop.Store
         //Called when the player interacts with the sign. Toggles store open state.
         public void OnInteract()
         {
-            if (storeManager == null)
+            var mgr = storeManager != null ? storeManager : StoreManager.Instance;
+            if (mgr == null)
             {
-                Debug.LogWarning("[StoreSign] No StoreManager assigned.", this);
+                Debug.LogWarning("[StoreSign] No StoreManager found.", this);
                 return;
             }
 
-            storeManager.ToggleOpen();
+            mgr.ToggleOpen();
             RefreshSignText();
         }
 
@@ -38,8 +39,9 @@ namespace AsakuShop.Store
 
         private void RefreshSignText()
         {
-            if (signText == null || storeManager == null) return;
-            signText.text = storeManager.IsOpen ? "OPEN" : "CLOSED";
+            var mgr = storeManager != null ? storeManager : StoreManager.Instance;
+            if (signText == null || mgr == null) return;
+            signText.text = mgr.IsOpen ? "OPEN" : "CLOSED";
         }
     }
 }
