@@ -5,10 +5,8 @@ using UnityEngine;
 
 namespace AsakuShop.Economy
 {
-    /// <summary>
-    /// Accumulates all financial activity for a single in-game day.
-    /// All values are in whole yen (int).
-    /// </summary>
+    // Accumulates all financial activity for a single in-game day.
+    // All values are in whole yen (int).
     [Serializable]
     public class DailyLedger
     {
@@ -19,25 +17,25 @@ namespace AsakuShop.Economy
         public int DayIndex         => dayIndex;
         public IReadOnlyList<SaleEntry> Sales => sales;
 
-        /// <summary>Total yen received from customers today.</summary>
+        //Total yen received from customers today.
         public int TotalRevenue     => sales.Sum(s => s.SalePrice);
 
-        /// <summary>Total cost of goods sold today (what the player paid for each item).</summary>
+        //Total cost of goods sold today (what the player paid for each item)
         public int TotalCogs        => sales.Sum(s => s.BasePrice);
 
-        /// <summary>Revenue minus cost of goods.</summary>
+        //Revenue minus cost of goods.
         public int GrossProfit      => TotalRevenue - TotalCogs;
 
-        /// <summary>Money the player spent today (purchases, upgrades, etc.).</summary>
+        //Money the player spent today (purchases, upgrades, etc.).
         public int TotalSpend       => totalSpend;
 
-        /// <summary>Gross profit minus total spend.</summary>
+        //Gross profit minus total spend.
         public int NetProfit        => GrossProfit - totalSpend;
 
-        /// <summary>Number of individual items sold.</summary>
+        //Number of individual items sold.
         public int TransactionCount => sales.Count;
 
-        /// <summary>DisplayName of the most-sold item by quantity. Empty string if no sales.</summary>
+        //DisplayName of the most-sold item by quantity. Empty string if no sales.
         public string MostSoldItem
         {
             get
@@ -55,14 +53,14 @@ namespace AsakuShop.Economy
             this.dayIndex = dayIndex;
         }
 
-        /// <summary>Record a completed item sale.</summary>
+        //Record a completed item sale.
         public void RecordSale(SaleEntry entry)
         {
             if (entry == null) return;
             sales.Add(entry);
         }
 
-        /// <summary>Record money the player spent today (deducted from net profit).</summary>
+        //Record money the player spent today (deducted from net profit).
         public void RecordSpend(int amount)
         {
             if (amount <= 0) return;
