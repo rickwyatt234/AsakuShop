@@ -30,6 +30,11 @@ namespace AsakuShop.Storage
 
         public float mountOffsetDistance = 0.5f;
         public float browsingDistance = 2f;
+
+        [SerializeField, Tooltip("Optional override: explicit world-space point a customer walks to before browsing this shelf. " +
+                                        "If null, the point is auto-calculated as 'browsingDistance' in front of the shelf.")]
+        private Transform customerApproachPoint;
+        
         [SerializeField] private Vector3 slotStartOffset = new Vector3(-0.9f, 0.9f, 0);
         [SerializeField] private Vector3 rotationOffset = Vector3.zero;
 
@@ -121,11 +126,9 @@ namespace AsakuShop.Storage
         public bool TryRemoveItem(ItemInstance item) => shelfInteraction != null && shelfInteraction.TryRemoveItem(item);
         public Vector3 GetSlotPosition(ItemInstance item) => shelfInteraction != null ? shelfInteraction.GetSlotPosition(item) : Vector3.zero;
 
-        /// <summary>
-        /// Unparents every child GameObject that has an <see cref="ItemPickup"/> component and
+        /// Unparents every child GameObject that has an ItemPickup component and
         /// enables physics on it (kinematic = false, useGravity = true, colliders re-enabled)
         /// so the items fall to the floor when the shelf is picked up.
-        /// </summary>
         public void EjectAllStockedItems()
         {
             // Collect all child ItemPickup references first to avoid modifying the hierarchy during iteration.
@@ -143,6 +146,20 @@ namespace AsakuShop.Storage
                 foreach (Collider col in pickup.GetComponentsInChildren<Collider>())
                     col.enabled = true;
             }
+        }
+
+        /// Returns the world-space position a customer's NavMeshAgent should navigate to
+        /// before picking an item from this shelf.
+        /// Uses the explicit customerApproachPoint override if assigned;
+        /// otherwise projects browsingDistance units in front of the shelf's
+        /// forward direction from the shelf's centre.
+        public Vector3 GetCustomerApproachPoint()
+        {
+            if (customerApproachPoint != null)
+                return customerApproachPoint.position;
+        
+            // Default: stand in front of the shelf face
+            return transform.position + transform.forward * browsingDistance;
         }
     }
 }
