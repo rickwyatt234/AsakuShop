@@ -1,0 +1,45 @@
+using TMPro;
+using UnityEngine;
+using AsakuShop.Core;
+
+namespace AsakuShop.Store
+{
+    // Interactable store sign that toggles the store open/closed state via StoreManager.
+    // Implement IInteractable so the player's raycast system can trigger it.
+    public class StoreSign : MonoBehaviour, IInteractable
+    {
+        [SerializeField] private StoreManager storeManager;
+        [SerializeField, Tooltip("Optional world-space TMP label on the sign itself.")]
+        private TextMeshPro signText;
+
+        private void Start()
+        {
+            RefreshSignText();
+        }
+
+        //Called when the player interacts with the sign. Toggles store open state.
+        public void OnInteract()
+        {
+            if (storeManager == null)
+            {
+                Debug.LogWarning("[StoreSign] No StoreManager assigned.", this);
+                return;
+            }
+
+            storeManager.ToggleOpen();
+            RefreshSignText();
+        }
+
+        //Called when the player looks at the sign — no action needed here.
+        public void OnExamine()
+        {
+            // Reserved for future tooltip/hint display.
+        }
+
+        private void RefreshSignText()
+        {
+            if (signText == null || storeManager == null) return;
+            signText.text = storeManager.IsOpen ? "OPEN" : "CLOSED";
+        }
+    }
+}
