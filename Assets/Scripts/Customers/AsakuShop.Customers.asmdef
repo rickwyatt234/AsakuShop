@@ -1,0 +1,19 @@
+{
+    "name": "AsakuShop.Customers",
+    "rootNamespace": "AsakuShop.Customers",
+    "references": [
+        "AsakuShop.Core",
+        "AsakuShop.Items",
+        "AsakuShop.Store",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
