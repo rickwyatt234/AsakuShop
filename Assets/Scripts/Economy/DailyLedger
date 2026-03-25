@@ -1,0 +1,84 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
+
+namespace AsakuShop.Economy
+{
+    /// <summary>
+    /// Accumulates all financial activity for a single in-game day.
+    /// All values are in whole yen (int).
+    /// </summary>
+    [Serializable]
+    public class DailyLedger
+    {
+        [SerializeField] private int dayIndex;
+        [SerializeField] private List<SaleEntry> sales = new List<SaleEntry>();
+        [SerializeField] private int totalSpend;
+
+        public int DayIndex         => dayIndex;
+        public IReadOnlyList<SaleEntry> Sales => sales;
+
+        /// <summary>Total yen received from customers today.</summary>
+        public int TotalRevenue     => sales.Sum(s => s.SalePrice);
+
+        /// <summary>Total cost of goods sold today (what the player paid for each item).</summary>
+        public int TotalCogs        => sales.Sum(s => s.BasePrice);
+
+        /// <summary>Revenue minus cost of goods.</summary>
+        public int GrossProfit      => TotalRevenue - TotalCogs;
+
+        /// <summary>Money the player spent today (purchases, upgrades, etc.).</summary>
+        public int TotalSpend       => totalSpend;
+
+        /// <summary>Gross profit minus total spend.</summary>
+        public int NetProfit        => GrossProfit - totalSpend;
+
+        /// <summary>Number of individual items sold.</summary>
+        public int TransactionCount => sales.Count;
+
+        /// <summary>DisplayName of the most-sold item by quantity. Empty string if no sales.</summary>
+        public string MostSoldItem
+        {
+            get
+            {
+                if (sales.Count == 0) return string.Empty;
+                return sales
+                    .GroupBy(s => s.DisplayName)
+                    .OrderByDescending(g => g.Count())
+                    .First().Key;
+            }
+        }
+
+        public DailyLedger(int dayIndex)
+        {
+            this.dayIndex = dayIndex;
+        }
+
+        /// <summary>Record a completed item sale.</summary>
+        public void RecordSale(SaleEntry entry)
+        {
+            if (entry == null) return;
+            sales.Add(entry);
+        }
+
+        /// <summary>Record money the player spent today (deducted from net profit).</summary>
+        public void RecordSpend(int amount)
+        {
+            if (amount <= 0) return;
+            totalSpend += amount;
+        }
+
+        public override string ToString()
+        {
+            return $"=== Day {dayIndex} Ledger ===\n" +
+                   $"  Transactions : {TransactionCount}\n" +
+                   $"  Revenue      : ¥{TotalRevenue:N0}\n" +
+                   $"  COGS         : ¥{TotalCogs:N0}\n" +
+                   $"  Gross Profit : ¥{GrossProfit:N0}\n" +
+                   $"  Spent        : ¥{TotalSpend:N0}\n" +
+                   $"  Net Profit   : ¥{NetProfit:N0}\n" +
+                   $"  Best Seller  : {(string.IsNullOrEmpty(MostSoldItem) ? "N/A" : MostSoldItem)}";
+        }
+    }
+}
