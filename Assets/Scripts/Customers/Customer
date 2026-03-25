@@ -162,7 +162,7 @@ namespace AsakuShop.Customers
             {
                 if (StoreManager.Instance == null) yield break;
 
-                Vector3 dest = StoreManager.Instance.GetExitPoint();
+                Vector3 dest = StoreManager.Instance.GetWanderPoint();
                 agent.SetDestination(dest);
                 yield return new WaitUntil(() => HasArrived());
                 yield return new WaitForSeconds(Random.Range(2f, 6f));
@@ -222,7 +222,7 @@ namespace AsakuShop.Customers
                 var frontPointProvider = targetShelf as IShelfFrontPoint;
                 destination = frontPointProvider != null
                     ? frontPointProvider.FrontPoint
-                    : targetShelf.transform.position + targetShelf.transform.forward * -0.8f;
+                    : targetShelf.transform.position + targetShelf.transform.forward * 0.8f;
             }
             catch
             {
@@ -261,7 +261,7 @@ namespace AsakuShop.Customers
                     itemProvider.TakeItem();
 
                 Inventory.Add(item);
-                // TODO: trigger grab animation via animator parameter "GrabItem"
+                animator.SetTrigger("GrabItem");
                 overheadUI?.ShowStatus("✓");
                 yield return new WaitForSeconds(0.8f);
             }
@@ -390,27 +390,4 @@ namespace AsakuShop.Customers
         }
     }
 
-    // ── Shelf duck-typing interfaces ──────────────────────────────────────────
-    // WallShelf should implement these. If it doesn't yet, add TODOs to WallShelf.
-
-    // Implement on WallShelf to expose the standing position customers walk to.
-    // TODO: Add this interface to WallShelf.
-
-    public interface IShelfFrontPoint
-    {
-        Vector3 FrontPoint { get; }
-    }
-
-
-    // Implement on WallShelf to expose item browsing methods.
-    // TODO: Add this interface to WallShelf.
-
-    public interface IShelfItemProvider
-    {
-        /// <summary>Returns the first available item without removing it. Returns null if empty.</summary>
-        ItemInstance PeekItem();
-
-        /// <summary>Removes and returns the first available item. Returns null if empty.</summary>
-        ItemInstance TakeItem();
-    }
 }

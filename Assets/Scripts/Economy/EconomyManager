@@ -49,6 +49,9 @@ namespace AsakuShop.Economy
 
             balance = startingBalance;
             Today   = new DailyLedger(0);
+
+            // Register so SaveManager captures and restores economy state on save/load.
+            SaveManager.Instance?.Register(this);
         }
 
         private void OnEnable()
@@ -89,7 +92,7 @@ namespace AsakuShop.Economy
         // Deducts money from the balance and records it as a spend in today's ledger.
         public void RecordSpend(int amount)
         {
-            amount = Mathf.Max(0, amount);
+            if (amount <= 0) return;
             Balance -= amount;
             Today?.RecordSpend(amount);
         }
@@ -134,7 +137,8 @@ namespace AsakuShop.Economy
             var data = JsonUtility.FromJson<EconomySaveData>(json);
             if (data == null) return;
 
-            balance = data.Balance;
+            // Use the property setter so the Mathf.Max(0, value) clamp is applied.
+            Balance = data.Balance;
             ledgers = data.Ledgers ?? new List<DailyLedger>();
             Today   = data.Today   ?? new DailyLedger(0);
         }
