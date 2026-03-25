@@ -2,7 +2,7 @@ using System;
 
 namespace AsakuShop.Core
 {
-    // Central hub for all core game events. Uses plain C# Actions so listeners can be added 
+    // Central hub for all core game events. Uses plain C# Actions so listeners can be added
     // from any assembly.
     // Use ClearAll() on scene teardown to prevent stale listeners from surviving a scene transition.
     public static class CoreEvents
@@ -16,17 +16,23 @@ namespace AsakuShop.Core
         public static event Action OnAfterLoad;
         public static event Action<int> OnMidnightReached;
 
-        // UI decoupling events (Step 2)
-        // Fired by StorageContainer instead of calling StorageInventoryUI directly
+        // UI decoupling events
         public static event Action<object> OnInventoryOpenRequested;
-        // Fired by PlayerHands.TryStoreItem instead of calling StorageInventoryUI.RefreshUI directly
         public static event Action<object> OnStorageUIRefreshRequested;
-        // Fired by PlayerHands instead of calling ItemExaminer.StartExamination directly
         public static event Action<object> OnExamineRequested;
-        // Fired by FirstPersonController instead of calling ContextHintDisplay directly
         public static event Action<IInteractable> OnContextHintRequested;
-        // Fired by FirstPersonController when no interactable is in range
         public static event Action OnContextHintHideRequested;
+
+        // Store events
+        public static event Action OnStoreOpened;
+        public static event Action OnStoreClosed;
+
+        // Customer events (object payload avoids cross-assembly type references)
+        public static event Action<object> OnCustomerEntered;
+        public static event Action<object> OnCustomerLeft;
+
+        // Economy events (object payload avoids cross-assembly type references)
+        public static event Action<object> OnItemSold;
 #endregion
 
 #region Raise Helpers
@@ -45,7 +51,7 @@ namespace AsakuShop.Core
         internal static void RaiseMidnightReached(int dayIndex)
             => OnMidnightReached?.Invoke(dayIndex);
 
-        // UI decoupling raise helpers (Step 2)
+        // UI decoupling raise helpers
         public static void RaiseInventoryOpenRequested(object container)
             => OnInventoryOpenRequested?.Invoke(container);
         public static void RaiseStorageUIRefreshRequested(object container)
@@ -56,6 +62,22 @@ namespace AsakuShop.Core
             => OnContextHintRequested?.Invoke(interactable);
         public static void RaiseContextHintHideRequested()
             => OnContextHintHideRequested?.Invoke();
+
+        // Store raise helpers
+        public static void RaiseStoreOpened()
+            => OnStoreOpened?.Invoke();
+        public static void RaiseStoreClosed()
+            => OnStoreClosed?.Invoke();
+
+        // Customer raise helpers
+        public static void RaiseCustomerEntered(object customer)
+            => OnCustomerEntered?.Invoke(customer);
+        public static void RaiseCustomerLeft(object customer)
+            => OnCustomerLeft?.Invoke(customer);
+
+        // Economy raise helpers
+        public static void RaiseItemSold(object saleEntry)
+            => OnItemSold?.Invoke(saleEntry);
 #endregion
 
 #region Cleanup Helper
@@ -73,6 +95,11 @@ namespace AsakuShop.Core
             OnExamineRequested          = null;
             OnContextHintRequested      = null;
             OnContextHintHideRequested  = null;
+            OnStoreOpened               = null;
+            OnStoreClosed               = null;
+            OnCustomerEntered           = null;
+            OnCustomerLeft              = null;
+            OnItemSold                  = null;
         }
 #endregion
     }
