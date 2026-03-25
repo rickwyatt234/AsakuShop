@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using AsakuShop.Items;
 using AsakuShop.Core;
 using AsakuShop.Storage;
+using AsakuShop.Store;
 using DG.Tweening;
 
 
@@ -195,7 +196,11 @@ namespace AsakuShop.Player
                 // Before holding the shelf, eject any stocked items so they fall to the floor.
                 ShelfComponent shelfComponent = shelf.GameObject.GetComponent<ShelfComponent>();
                 if (shelfComponent != null)
+                {
+                    shelfComponent.NotifyPickedUp();
+                    StoreManager.Instance?.UnregisterShelf(shelfComponent);
                     shelfComponent.EjectAllStockedItems();
+                }
 
                 // Also clear the shelf's logical storage data so the shelf starts empty.
                 IStorageUnit storageUnit = shelf.GameObject.GetComponent<IStorageUnit>();
@@ -408,7 +413,17 @@ namespace AsakuShop.Player
                 //Debug.Log($"IsShelfWallMounted(heldShelf): {IsShelfWallMounted(heldShelf)}");
                 heldShelf = null;
 
-                
+                // Notify and register with StoreManager if the shelf was placed on a wall inside the store.
+                ShelfComponent sc = heldItemVisualTransform?.GetComponent<ShelfComponent>();
+                if (sc != null && isWallMount)
+                {
+                    sc.NotifyMounted();
+                    var store = StoreManager.Instance;
+                    if (store != null && store.StoreBounds.Contains(sc.transform.position))
+                        store.RegisterShelf(sc);
+                    else
+                        Debug.Log($"[PlayerHands] {sc.name} mounted outside store bounds — not registered.");
+                }
             }
 
             if (placementPreviewVisual != null)

@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.AI;
 using AsakuShop.Core;
+using AsakuShop.Storage;
 
 namespace AsakuShop.Store
 {
@@ -30,6 +31,10 @@ namespace AsakuShop.Store
 
         // ── Shelves ──────────────────────────────────────────────────────────
         private HashSet<MonoBehaviour> registeredShelves = new HashSet<MonoBehaviour>();
+
+        // ── Typed shelf registry (wall-mounted shelves inside store bounds) ──
+        private readonly List<ShelfComponent> _registeredShelves = new();
+        public IReadOnlyList<ShelfComponent> RegisteredShelves => _registeredShelves;
 
         // ── Counters ─────────────────────────────────────────────────────────
         private List<CheckoutCounter> checkoutCounters = new List<CheckoutCounter>();
@@ -77,6 +82,9 @@ namespace AsakuShop.Store
 
         // ── Bounds ───────────────────────────────────────────────────────────
 
+        // The store's world-space bounds used for shelf registration checks.
+        public Bounds StoreBounds => storeBounds;
+
         //Returns true if the world-space position is within the store bounds.
         public bool IsWithinStore(Vector3 worldPosition) => storeBounds.Contains(worldPosition);
 
@@ -90,8 +98,30 @@ namespace AsakuShop.Store
         }
 
         // ── Shelf registry ───────────────────────────────────────────────────
-        /// Registers a shelf with StoreManager so customers can discover it.
-        /// Accepts any MonoBehaviour — expected to be a WallShelf in practice.
+        // Called by PlayerHands after a successful wall-mount placement confirms the shelf
+        // is inside StoreBounds. Registers it in the typed list so customers
+        // can discover it via GetStockedShelves.
+        public void RegisterShelf(ShelfComponent shelf)
+        {
+            if (shelf == null || _registeredShelves.Contains(shelf)) return;
+            _registeredShelves.Add(shelf);
+            registeredShelves.Add(shelf); // HashSet silently ignores duplicates; safe if Customer previously added this shelf
+            Debug.Log($"[StoreManager] Shelf registered: {shelf.name} ({_registeredShelves.Count} total)");
+        }
+
+        // Called by PlayerHands before the shelf is picked up off the wall.
+        // Removes the shelf from both the typed list and the browsing pool.
+        public void UnregisterShelf(ShelfComponent shelf)
+        {
+            if (_registeredShelves.Remove(shelf))
+            {
+                registeredShelves.Remove(shelf);
+                Debug.Log($"[StoreManager] Shelf unregistered: {shelf.name} ({_registeredShelves.Count} remaining)");
+            }
+        }
+
+        // Registers a shelf with StoreManager so customers can discover it.
+        // Accepts any MonoBehaviour — used by Customer AI for the claim/return cycle.
         public void RegisterShelf(MonoBehaviour shelf)
         {
             if (shelf != null) registeredShelves.Add(shelf);
@@ -102,7 +132,18 @@ namespace AsakuShop.Store
             registeredShelves.Remove(shelf);
         }
 
-        //Returns a random registered shelf, or null if none are registered.
+        // Returns all registered wall-mounted shelves that currently have at least one item.
+        // Customers use this to find shelves worth browsing.
+        public List<ShelfComponent> GetStockedShelves()
+        {
+            var result = new List<ShelfComponent>();
+            foreach (var shelf in _registeredShelves)
+                if (shelf != null && shelf.Items.Count > 0)
+                    result.Add(shelf);
+            return result;
+        }
+
+        //Returns a random registered shelf from the browsing pool, or null if none are registered.
         public MonoBehaviour GetRandomShelf()
         {
             if (registeredShelves.Count == 0) return null;
@@ -168,7 +209,7 @@ namespace AsakuShop.Store
             // If the customer wants to shop: only if store is open, below max shoppers, and there are shelves
             bool wantsToShop = IsOpen
                 && activeShoppers.Count < maxShoppers
-                && registeredShelves.Count > 0;
+                && _registeredShelves.Count > 0;
 
             // Set wantsToShop via interface or reflection — Customer component sets it publicly
             var customerComp = go.GetComponent<ICheckoutCustomer>();

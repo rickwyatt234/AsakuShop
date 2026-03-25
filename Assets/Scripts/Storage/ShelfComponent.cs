@@ -126,9 +126,9 @@ namespace AsakuShop.Storage
         public bool TryRemoveItem(ItemInstance item) => shelfInteraction != null && shelfInteraction.TryRemoveItem(item);
         public Vector3 GetSlotPosition(ItemInstance item) => shelfInteraction != null ? shelfInteraction.GetSlotPosition(item) : Vector3.zero;
 
-        /// Unparents every child GameObject that has an ItemPickup component and
-        /// enables physics on it (kinematic = false, useGravity = true, colliders re-enabled)
-        /// so the items fall to the floor when the shelf is picked up.
+        // Unparents every child GameObject that has an ItemPickup component and
+        // enables physics on it (kinematic = false, useGravity = true, colliders re-enabled)
+        // so the items fall to the floor when the shelf is picked up.
         public void EjectAllStockedItems()
         {
             // Collect all child ItemPickup references first to avoid modifying the hierarchy during iteration.
@@ -148,11 +148,11 @@ namespace AsakuShop.Storage
             }
         }
 
-        /// Returns the world-space position a customer's NavMeshAgent should navigate to
-        /// before picking an item from this shelf.
-        /// Uses the explicit customerApproachPoint override if assigned;
-        /// otherwise projects browsingDistance units in front of the shelf's
-        /// forward direction from the shelf's centre.
+        // Returns the world-space position a customer's NavMeshAgent should navigate to
+        // before picking an item from this shelf.
+        // Uses the explicit customerApproachPoint override if assigned;
+        // otherwise projects browsingDistance units in front of the shelf's
+        // forward direction from the shelf's centre.
         public Vector3 GetCustomerApproachPoint()
         {
             if (customerApproachPoint != null)
@@ -160,6 +160,21 @@ namespace AsakuShop.Storage
         
             // Default: stand in front of the shelf face
             return transform.position + transform.forward * browsingDistance;
+        }
+
+        // Called by PlayerHands after a successful wall-mount placement.
+        // Actual StoreManager registration is handled by PlayerHands (which references
+        // both AsakuShop.Storage and AsakuShop.Store), keeping Storage free of a Store dependency.
+        public void NotifyMounted()
+        {
+            // Hook: override in editor or subclass if needed.
+        }
+
+        // Called by PlayerHands before the shelf is picked up off the wall.
+        // Actual StoreManager unregistration is handled by PlayerHands.
+        public void NotifyPickedUp()
+        {
+            // Hook: override in editor or subclass if needed.
         }
     }
 }

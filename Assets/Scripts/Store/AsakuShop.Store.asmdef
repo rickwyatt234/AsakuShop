@@ -1,0 +1,21 @@
+{
+    "name": "AsakuShop.Store",
+    "rootNamespace": "AsakuShop.Store",
+    "references": [
+        "AsakuShop.Core",
+        "AsakuShop.Items",
+        "AsakuShop.Economy",
+        "AsakuShop.Storage",
+        "Unity.TextMeshPro",
+        "Unity.Cinemachine"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
