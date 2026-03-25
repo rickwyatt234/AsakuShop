@@ -5,7 +5,6 @@ namespace AsakuShop.Items
     [CreateAssetMenu(fileName = "NewItem", menuName = "AsakuShop/Item Definition")]
     public class ItemDefinition : ScriptableObject
     {
-        // Use snake_case, e.g. "item_onigiri_salmon".
         [Tooltip("Globally unique string identifier (snake_case). Used as the key in ItemRegistry.")]
         public string ItemId;
 
@@ -33,6 +32,9 @@ namespace AsakuShop.Items
         [Tooltip("Default wholesale cost in yen (what the player pays to acquire this item).")]
         public float BasePrice;
 
+        [Tooltip("Suggested retail price in yen (int). Used by customers to evaluate if an item is worth buying. If 0, defaults to Mathf.RoundToInt(BasePrice) * 2.")]
+        public int MarketPrice;
+
         [Tooltip("Flags that declare which external systems (weather, trends, events, etc.) can influence demand for this item.")]
         public DemandFactorFlags DemandFactors;
 
@@ -50,6 +52,11 @@ namespace AsakuShop.Items
 
         public bool IsPerishable => PreferredStorageType != PreferredStorageType.Dry;
 
+        // Returns the effective market price in yen. If MarketPrice is not set (0),
+        // falls back to double the BasePrice, rounded to the nearest whole yen.
+        public int EffectiveMarketPrice => MarketPrice > 0
+            ? MarketPrice
+            : Mathf.RoundToInt(BasePrice) * 2;
 
         private void OnValidate()
         {
