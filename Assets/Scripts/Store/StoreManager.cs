@@ -16,6 +16,20 @@ namespace AsakuShop.Store
     {
         public static StoreManager Instance { get; private set; }
 
+        // Registers the bootstrap factory with GameBootstrapper before any scene loads.
+        // This avoids a cyclic assembly reference between AsakuShop.Core and AsakuShop.Store.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void RegisterBootstrapper()
+        {
+            GameBootstrapper.RegisterBootstrapper(() =>
+            {
+                if (Instance != null) return;
+                GameObject go = new GameObject("[StoreManager]");
+                go.AddComponent<StoreManager>();
+                // DontDestroyOnLoad is called inside StoreManager.Awake().
+            });
+        }
+
         // ── Inspector ────────────────────────────────────────────────────────
         [Header("Store Bounds (drawn as yellow gizmo)")]
         [SerializeField] private Bounds storeBounds;
