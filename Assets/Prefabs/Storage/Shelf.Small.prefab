@@ -116,8 +116,8 @@ MonoBehaviour:
   slotRows: 4
   slotSpacingX: 0.275
   slotSpacingY: 0.525
-  stockingRotation: {x: -90, y: 0, z: 0}
-  stockingOffset: {x: 0.25, y: 0.35, z: 0.25}
+  stockingRotation: {x: 0, y: 0, z: 90}
+  stockingOffset: {x: 0, y: 0, z: 0.325}
   mountOffsetDistance: 0.5
   browsingDistance: 0.5
   slotStartOffset: {x: 0, y: 0, z: 0}
