@@ -108,6 +108,10 @@ namespace AsakuShop.Store
 
             if (cashierCamera != null) cashierCamera.gameObject.SetActive(true);
 
+            // Transition to Checkout phase so the game knows the player is at the counter.
+            // This keeps the clock ticking and preserves look input while locking movement.
+            GameStateController.Instance.RequestTransition(GamePhase.Checkout);
+
             // Lock player movement while at the counter.
             PlayerService.InputManager?.DisableMovementInput();
 
@@ -122,6 +126,9 @@ namespace AsakuShop.Store
             playerAtCounter = false;
 
             if (cashierCamera != null) cashierCamera.gameObject.SetActive(false);
+
+            // Return to normal gameplay phase before re-enabling movement.
+            GameStateController.Instance.RequestTransition(GamePhase.Playing);
 
             // Release player movement lock.
             PlayerService.InputManager?.EnableMovementInput();

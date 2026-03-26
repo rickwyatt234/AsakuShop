@@ -120,7 +120,16 @@ namespace AsakuShop.Input
 
             private void Update()
             {
-                if (GameStateController.Instance.CurrentPhase != GamePhase.Playing)
+                var phase = GameStateController.Instance.CurrentPhase;
+
+                // During checkout the player is anchored at the counter but can still look around.
+                if (phase == GamePhase.Checkout)
+                {
+                    HandleRotation();
+                    return;
+                }
+
+                if (phase != GamePhase.Playing)
                     return;
                 if (InventoryState.IsOpen)
                     return;

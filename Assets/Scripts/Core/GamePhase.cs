@@ -27,6 +27,9 @@ namespace AsakuShop.Core
         //Player is examining an item in detail. Triggered by pressing examine on an item in the world or inventory. Clock ticks continuously.
         ItemExamination,
 
+        // Player is operating the checkout counter as cashier. Movement locked; look input still active. Clock ticks continuously.
+        Checkout,
+
         /// Game is paused. Overlays any phase except Boot and MainMenu.
         /// Clock stopped. Restores to previous phase on resume.
         /// Can be triggered from anywhere at any time.
