@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace AsakuShop.Core
@@ -12,8 +14,20 @@ namespace AsakuShop.Core
         public static GameClock Clock { get; private set; }
         public static GameStateController State { get; private set; }
         public static SaveManager Save { get; private set; }
-        public static AsakuShop.Economy.EconomyManager Economy { get; private set; }
-        public static AsakuShop.Store.StoreManager Store { get; private set; }
+#endregion
+
+#region External manager bootstrappers
+        // Other assemblies (Economy, Store, …) register a factory here via
+        // [RuntimeInitializeOnLoadMethod(SubsystemRegistration)] so that
+        // GameBootstrapper can create their singletons in the correct order
+        // without introducing cyclic assembly references.
+        private static readonly List<Action> _bootstrappers = new List<Action>();
+
+        public static void RegisterBootstrapper(Action bootstrapper)
+        {
+            if (bootstrapper != null)
+                _bootstrappers.Add(bootstrapper);
+        }
 #endregion
 
 #region Unity methods
@@ -22,8 +36,7 @@ namespace AsakuShop.Core
             EnsureClock();
             EnsureStateController();
             EnsureSaveManager();
-            EnsureEconomyManager();
-            EnsureStoreManager();
+            EnsureExternalManagers();
 
             if (State.Clock == null)
                 State.Clock = Clock;
@@ -83,30 +96,10 @@ namespace AsakuShop.Core
             // DontDestroyOnLoad is called inside SaveManager.Awake().
         }
 
-        private static void EnsureEconomyManager()
+        private static void EnsureExternalManagers()
         {
-            if (AsakuShop.Economy.EconomyManager.Instance != null)
-            {
-                Economy = AsakuShop.Economy.EconomyManager.Instance;
-                return;
-            }
-
-            GameObject go = new GameObject("[EconomyManager]");
-            Economy = go.AddComponent<AsakuShop.Economy.EconomyManager>();
-            // DontDestroyOnLoad is called inside EconomyManager.Awake().
-        }
-
-        private static void EnsureStoreManager()
-        {
-            if (AsakuShop.Store.StoreManager.Instance != null)
-            {
-                Store = AsakuShop.Store.StoreManager.Instance;
-                return;
-            }
-
-            GameObject go = new GameObject("[StoreManager]");
-            Store = go.AddComponent<AsakuShop.Store.StoreManager>();
-            // DontDestroyOnLoad is called inside StoreManager.Awake().
+            foreach (Action bootstrapper in _bootstrappers)
+                bootstrapper();
         }
 #endregion
     }

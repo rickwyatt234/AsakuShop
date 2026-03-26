@@ -13,6 +13,20 @@ namespace AsakuShop.Economy
     {
         public static EconomyManager Instance { get; private set; }
 
+        // Registers the bootstrap factory with GameBootstrapper before any scene loads.
+        // This avoids a cyclic assembly reference between AsakuShop.Core and AsakuShop.Economy.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void RegisterBootstrapper()
+        {
+            GameBootstrapper.RegisterBootstrapper(() =>
+            {
+                if (Instance != null) return;
+                GameObject go = new GameObject("[EconomyManager]");
+                go.AddComponent<EconomyManager>();
+                // DontDestroyOnLoad is called inside EconomyManager.Awake().
+            });
+        }
+
         // ── Balance ──────────────────────────────────────────────────────────
         [SerializeField] private int startingBalance = 50000;
         private int balance;
