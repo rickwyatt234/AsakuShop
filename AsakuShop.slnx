@@ -3,10 +3,11 @@
   <Project Path="AsakuShop.Core.csproj" />
   <Project Path="AsakuShop.Store.csproj" />
   <Project Path="AsakuShop.Economy.csproj" />
-  <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="DOTween.Modules.csproj" />
   <Project Path="AsakuShop.Customers.csproj" />
   <Project Path="AsakuShop.Input.csproj" />
   <Project Path="AsakuShop.Storage.csproj" />
   <Project Path="AsakuShop.UI.csproj" />
   <Project Path="AsakuShop.Player.csproj" />
+  <Project Path="Assembly-CSharp.csproj" />
 </Solution>

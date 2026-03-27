@@ -1,5 +1,4 @@
 using UnityEngine;
-using AsakuShop.Core;
 
 namespace AsakuShop.Store
 {
@@ -26,19 +25,19 @@ namespace AsakuShop.Store
 
         private void Update()
         {
-            if (Input.GetMouseButtonDown(0))
+            if (UnityEngine.Input.GetMouseButtonDown(0))
                 TryBeginDrag();
 
-            if (draggingItem != null && Input.GetMouseButton(0))
+            if (draggingItem != null && UnityEngine.Input.GetMouseButton(0))
                 ContinueDrag();
 
-            if (draggingItem != null && Input.GetMouseButtonUp(0))
+            if (draggingItem != null && UnityEngine.Input.GetMouseButtonUp(0))
                 EndDrag();
         }
 
         private void TryBeginDrag()
         {
-            Ray ray = mainCam.ScreenPointToRay(Input.mousePosition);
+            Ray ray = mainCam.ScreenPointToRay(UnityEngine.Input.mousePosition);
             if (!Physics.Raycast(ray, out RaycastHit hit, 100f, checkoutItemLayerMask)) return;
 
             var item = hit.collider.GetComponent<CheckoutItem>();
@@ -57,7 +56,7 @@ namespace AsakuShop.Store
 
         private void ContinueDrag()
         {
-            Ray ray = mainCam.ScreenPointToRay(Input.mousePosition);
+            Ray ray = mainCam.ScreenPointToRay(UnityEngine.Input.mousePosition);
             if (dragPlane.Raycast(ray, out float distance))
             {
                 Vector3 worldPoint = ray.GetPoint(distance);

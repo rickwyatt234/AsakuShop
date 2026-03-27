@@ -156,6 +156,18 @@ namespace AsakuShop.Economy
             ledgers = data.Ledgers ?? new List<DailyLedger>();
             Today   = data.Today   ?? new DailyLedger(0);
         }
-    }
 #endregion
+
+
+#region Debugging
+        private void OnGUI()
+        {
+            GUILayout.BeginArea(new Rect(0, 80, 300, 200));
+            GUILayout.Label($"Balance: ¥{Balance}");
+            GUILayout.EndArea();
+        }
+#endregion
+    }
+
 }
+

@@ -1,3 +1,4 @@
+using UnityEngine;
 
 namespace AsakuShop.Core
 {
@@ -12,5 +13,18 @@ namespace AsakuShop.Core
         /// Store components (e.g. CheckoutCounter) use this to lock/unlock player movement
         /// without taking a hard dependency on AsakuShop.Input.
         public static IInputManager InputManager { get; set; }
+        public static Transform GetTransform()
+        {
+            if (PickupTarget is MonoBehaviour mb)
+            {
+                // Navigate up to find the root
+                Transform current = mb.transform;
+                while (current.parent != null)
+                    current = current.parent;
+                return current;
+            }
+            return null;
+        }
+        
     }
 }

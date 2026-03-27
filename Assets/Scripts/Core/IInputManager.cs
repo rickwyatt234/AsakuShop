@@ -14,6 +14,8 @@ namespace AsakuShop.Core
         float rotatePreviewVertical { get; }
         float rotatePreviewHorizontal { get; }
         bool rotatePreviewModifier { get; }
+        bool cancel { get; }
+        bool confirm { get; }
 
         bool IsGamepadActive { get; }
 
@@ -23,6 +25,8 @@ namespace AsakuShop.Core
         string GetRotatePreviewModifierKeyName();
         void DisableMovementInput();
         void EnableMovementInput();
+        void DisableLookInput();
+        void EnableLookInput();
     }
     
 }

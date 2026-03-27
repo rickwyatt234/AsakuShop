@@ -47,12 +47,23 @@ namespace AsakuShop.Customers
         private bool          askedToLeave;
         private Coroutine     shoppingCoroutine;
 
+        [Header("Debug")]
+        [SerializeField] private bool debugEntryLogs = true;
+
         // ── Lifecycle ─────────────────────────────────────────────────────────
 
         private void Awake()
         {
             animator = GetComponent<Animator>();
             agent    = GetComponent<NavMeshAgent>();
+
+            // Ensure the agent starts on the NavMesh using Warp (no pathfinding)
+            if (NavMesh.SamplePosition(transform.position, out NavMeshHit hit, 2f, NavMesh.AllAreas))
+            {
+                agent.Warp(hit.position);
+            }
+
+            agent.areaMask = NavMesh.AllAreas;
 
             agent.speed                  = WALK_SPEED;
             agent.angularSpeed           = 3600f;
@@ -63,6 +74,7 @@ namespace AsakuShop.Customers
 
         private void Start()
         {
+            StoreManager.Instance?.RegisterPedestrian();
             StartCoroutine(PedestrianLoop());
         }
 
@@ -117,37 +129,61 @@ namespace AsakuShop.Customers
 
         private IEnumerator PedestrianLoop()
         {
-            if (StoreManager.Instance == null) yield break;
+            if (StoreManager.Instance == null)
+            {
+                LogEntry("No StoreManager instance found. Aborting.");
+                yield break;
+            }
 
             // If we don't want to shop, just wander indefinitely
             if (!wantsToShop)
             {
+                //LogEntry("Spawned as pedestrian only. Will wander instead of entering the store.");
                 yield return WanderForever();
                 yield break;
             }
 
-            // Head toward the store entrance
+            LogEntry($"Trying to enter store. startPos={transform.position}, insideBounds={StoreManager.Instance.IsWithinStore(transform.position)}");
+
             while (!StoreManager.Instance.IsWithinStore(transform.position) && !askedToLeave)
             {
-                Vector3 dest = StoreManager.Instance.GetExitPoint();
+                Vector3 dest = StoreManager.Instance.GetEntryPoint();
+                bool wasInside = StoreManager.Instance.IsWithinStore(transform.position);
+
+                LogEntry($"Heading toward store entry. currentPos={transform.position}, entryTarget={dest}, insideBounds={wasInside}");
                 agent.SetDestination(dest);
 
-                // Walk toward entrance — stop early if we enter store bounds
                 yield return new WaitUntil(() =>
                     HasArrived() ||
                     StoreManager.Instance.IsWithinStore(transform.position) ||
                     askedToLeave);
 
-                if (!StoreManager.Instance.IsWithinStore(transform.position))
+                bool hasArrived = HasArrived();
+                bool isInside = StoreManager.Instance.IsWithinStore(transform.position);
+
+                LogEntry($"Entry step finished. currentPos={transform.position}, arrived={hasArrived}, insideBounds={isInside}, askedToLeave={askedToLeave}");
+
+                if (isInside)
+                    LogEntry("Entered store bounds.");
+
+                if (hasArrived && !isInside)
+                    LogEntry("Reached entry target but still outside store bounds. Proceeding anyway.");
+
+                if (hasArrived)
+                    break;
+
+                if (!isInside)
                     yield return new WaitForSeconds(Random.Range(0.5f, 2f));
             }
 
             if (askedToLeave)
             {
+                LogEntry("Asked to leave before shopping started.");
                 yield return Leave();
                 yield break;
             }
 
+            LogEntry("Commencing shopping.");
             CoreEvents.RaiseCustomerEntered(this);
             overheadUI?.ShowStatus("🛒");
             StoreManager.Instance.RegisterShopper(this);
@@ -313,6 +349,7 @@ namespace AsakuShop.Customers
             isLeaving = true;
 
             StoreManager.Instance?.UnregisterShopper(this);
+            StoreManager.Instance?.UnregisterPedestrian(); 
             CoreEvents.RaiseCustomerLeft(this);
 
             overheadUI?.ShowDialog("Bye!", 1.5f);
@@ -381,13 +418,23 @@ namespace AsakuShop.Customers
                 .SetEase(Ease.OutQuad)
                 .WaitForCompletion();
         }
-
+        private void LogEntry(string message)
+        {
+            if (!debugEntryLogs) return;
+            Debug.Log($"[Customer:{name}] {message}");
+        }
         private void UpdateAnimator()
         {
             if (animator == null) return;
-            bool isMoving = agent.velocity.sqrMagnitude > 0.01f;
+            
+            bool hasPath = agent.hasPath;
+            float remainingDist = agent.remainingDistance;
+            
+            bool isMoving = hasPath && remainingDist > agent.stoppingDistance && !float.IsInfinity(remainingDist);
             animator.SetBool("IsMoving", isMoving);
         }
+
+
     }
 
 }

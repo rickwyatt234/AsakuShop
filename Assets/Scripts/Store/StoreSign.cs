@@ -9,8 +9,15 @@ namespace AsakuShop.Store
     public class StoreSign : MonoBehaviour, IInteractable
     {
         [SerializeField] private StoreManager storeManager;
+
         [SerializeField, Tooltip("Optional world-space TMP label on the sign itself.")]
         private TextMeshPro signText;
+
+        private void Awake()
+        {
+            if (storeManager == null)
+                storeManager = StoreManager.Instance; // Try to auto-assign from singleton if not set
+        }
 
         private void Start()
         {
@@ -28,6 +35,7 @@ namespace AsakuShop.Store
             }
 
             mgr.ToggleOpen();
+            //Debug.Log($"[StoreSign] Store is now {(mgr.IsOpen ? "OPEN" : "CLOSED")}");
             RefreshSignText();
         }
 

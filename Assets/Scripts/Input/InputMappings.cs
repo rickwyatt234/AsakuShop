@@ -190,6 +190,24 @@ public partial class @InputMappings: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Cancel"",
+                    ""type"": ""Button"",
+                    ""id"": ""f752ae7f-69d9-4028-aad5-e977115484c2"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Confirm"",
+                    ""type"": ""Button"",
+                    ""id"": ""4c5c2ae0-2060-45e5-9ea3-4c45e8b10f28"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -555,6 +573,39 @@ public partial class @InputMappings: IInputActionCollection2, IDisposable
                     ""action"": ""RotatePreviewModifier"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""9ce2d69f-488f-4c49-bf17-7d303c7399e7"",
+                    ""path"": ""<Keyboard>/escape"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Cancel"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""a5a0866e-a6ed-406b-b320-32298aae1305"",
+                    ""path"": ""<Gamepad>/buttonEast"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Cancel"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""97d314f3-35b6-4e8c-9e0b-4fc147c19d6b"",
+                    ""path"": ""<Keyboard>/enter"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Confirm"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -574,6 +625,8 @@ public partial class @InputMappings: IInputActionCollection2, IDisposable
         m_Player_RotatePreviewVertical = m_Player.FindAction("RotatePreviewVertical", throwIfNotFound: true);
         m_Player_RotatePreviewHorizontal = m_Player.FindAction("RotatePreviewHorizontal", throwIfNotFound: true);
         m_Player_RotatePreviewModifier = m_Player.FindAction("RotatePreviewModifier", throwIfNotFound: true);
+        m_Player_Cancel = m_Player.FindAction("Cancel", throwIfNotFound: true);
+        m_Player_Confirm = m_Player.FindAction("Confirm", throwIfNotFound: true);
     }
 
     ~@InputMappings()
@@ -665,6 +718,8 @@ public partial class @InputMappings: IInputActionCollection2, IDisposable
     private readonly InputAction m_Player_RotatePreviewVertical;
     private readonly InputAction m_Player_RotatePreviewHorizontal;
     private readonly InputAction m_Player_RotatePreviewModifier;
+    private readonly InputAction m_Player_Cancel;
+    private readonly InputAction m_Player_Confirm;
     /// <summary>
     /// Provides access to input actions defined in input action map "Player".
     /// </summary>
@@ -720,6 +775,14 @@ public partial class @InputMappings: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "Player/RotatePreviewModifier".
         /// </summary>
         public InputAction @RotatePreviewModifier => m_Wrapper.m_Player_RotatePreviewModifier;
+        /// <summary>
+        /// Provides access to the underlying input action "Player/Cancel".
+        /// </summary>
+        public InputAction @Cancel => m_Wrapper.m_Player_Cancel;
+        /// <summary>
+        /// Provides access to the underlying input action "Player/Confirm".
+        /// </summary>
+        public InputAction @Confirm => m_Wrapper.m_Player_Confirm;
         /// <summary>
         /// Provides access to the underlying input action map instance.
         /// </summary>
@@ -779,6 +842,12 @@ public partial class @InputMappings: IInputActionCollection2, IDisposable
             @RotatePreviewModifier.started += instance.OnRotatePreviewModifier;
             @RotatePreviewModifier.performed += instance.OnRotatePreviewModifier;
             @RotatePreviewModifier.canceled += instance.OnRotatePreviewModifier;
+            @Cancel.started += instance.OnCancel;
+            @Cancel.performed += instance.OnCancel;
+            @Cancel.canceled += instance.OnCancel;
+            @Confirm.started += instance.OnConfirm;
+            @Confirm.performed += instance.OnConfirm;
+            @Confirm.canceled += instance.OnConfirm;
         }
 
         /// <summary>
@@ -823,6 +892,12 @@ public partial class @InputMappings: IInputActionCollection2, IDisposable
             @RotatePreviewModifier.started -= instance.OnRotatePreviewModifier;
             @RotatePreviewModifier.performed -= instance.OnRotatePreviewModifier;
             @RotatePreviewModifier.canceled -= instance.OnRotatePreviewModifier;
+            @Cancel.started -= instance.OnCancel;
+            @Cancel.performed -= instance.OnCancel;
+            @Cancel.canceled -= instance.OnCancel;
+            @Confirm.started -= instance.OnConfirm;
+            @Confirm.performed -= instance.OnConfirm;
+            @Confirm.canceled -= instance.OnConfirm;
         }
 
         /// <summary>
@@ -940,5 +1015,19 @@ public partial class @InputMappings: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnRotatePreviewModifier(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "Cancel" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnCancel(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "Confirm" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnConfirm(InputAction.CallbackContext context);
     }
 }

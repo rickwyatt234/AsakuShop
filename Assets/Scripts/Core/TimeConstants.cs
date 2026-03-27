@@ -20,7 +20,7 @@ namespace AsakuShop.Core
 #region Time scales
 
         // Default time-scale: X in-game minute passes per real-world second.
-        public const float DefaultTimeScale = 1.0f;
+        public const float DefaultTimeScale = 0.5f;
 
         // Time-scale used while the player is sleeping — effectively instant
         // fast-forward.

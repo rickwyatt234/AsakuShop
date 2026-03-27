@@ -4,8 +4,6 @@ using AsakuShop.Core;
 
 namespace AsakuShop.Store
 {
-    // Entrance double-door. Optionally paired with a second EntranceDoor that
-    // opens/closes in tandem. Customers trigger OpenIfClosed() via raycast.
     [RequireComponent(typeof(BoxCollider))]
     public class EntranceDoor : MonoBehaviour, IInteractable
     {
@@ -16,33 +14,52 @@ namespace AsakuShop.Store
         private EntranceDoor pairDoor;
 
         [SerializeField] private float animDuration = 0.35f;
+        
+        [SerializeField, Tooltip("Offset from door center to hinge point (e.g., left edge: -width/2, 0, 0).")]
+        private Vector3 hingeOffset = Vector3.zero;
 
         private BoxCollider boxCollider;
         private bool isOpen;
         private bool isAnimating;
+        private Transform hingePivot;
 
         public bool IsOpen => isOpen;
 
         private void Awake()
         {
             boxCollider = GetComponent<BoxCollider>();
+            
+            // Create hinge pivot if offset is set
+            if (hingeOffset != Vector3.zero)
+            {
+                hingePivot = new GameObject("HingePivot").transform;
+                hingePivot.SetParent(transform.parent);
+                hingePivot.localPosition = transform.localPosition + hingeOffset;
+                hingePivot.localRotation = transform.localRotation;
+                
+                // Parent the door to the hinge pivot
+                transform.SetParent(hingePivot);
+                transform.localPosition = -hingeOffset;
+            }
+            else
+            {
+                hingePivot = transform;
+            }
         }
 
-        //Opens this door (and the pair if assigned) if not already open.
         public void OpenIfClosed()
         {
             if (!isOpen) Open();
             if (pairDoor != null && !pairDoor.IsOpen) pairDoor.Open();
         }
 
-        //Opens this door only.
         public void Open()
         {
             if (isAnimating || isOpen) return;
             isAnimating = true;
             boxCollider.enabled = false;
 
-            transform.DOLocalRotate(openAngle, animDuration)
+            hingePivot.DOLocalRotate(openAngle, animDuration)
                 .SetEase(Ease.OutQuad)
                 .OnComplete(() =>
                 {
@@ -52,14 +69,13 @@ namespace AsakuShop.Store
                 });
         }
 
-        //Closes this door only.
         public void Close()
         {
             if (isAnimating || !isOpen) return;
             isAnimating = true;
             boxCollider.enabled = false;
 
-            transform.DOLocalRotate(Vector3.zero, animDuration)
+            hingePivot.DOLocalRotate(Vector3.zero, animDuration)
                 .SetEase(Ease.OutQuad)
                 .OnComplete(() =>
                 {
@@ -69,7 +85,6 @@ namespace AsakuShop.Store
                 });
         }
 
-        // IInteractable — let the player manually use the door
         public void OnInteract()
         {
             if (isOpen)

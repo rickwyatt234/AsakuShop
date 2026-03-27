@@ -19,7 +19,9 @@ namespace AsakuShop.Input
 
         public float rotatePreviewVertical => inputActions.Player.RotatePreviewVertical.ReadValue<float>();
         public float rotatePreviewHorizontal => inputActions.Player.RotatePreviewHorizontal.ReadValue<float>();
-        public bool rotatePreviewModifier => inputActions.Player.RotatePreviewModifier.IsPressed(); // You need to add Shift input action
+        public bool rotatePreviewModifier => inputActions.Player.RotatePreviewModifier.IsPressed(); 
+        public bool cancel => inputActions.Player.Cancel.IsPressed();
+        public bool confirm => inputActions.Player.Confirm.IsPressed(); 
 
         public bool IsGamepadActive => Gamepad.current != null;
 
@@ -126,6 +128,14 @@ namespace AsakuShop.Input
         public void EnableMovementInput()
         {
             inputActions.Player.Move.Enable();
+        }
+        public void DisableLookInput()
+        {
+            inputActions.Player.Look.Disable();
+        }
+        public void EnableLookInput()
+        {
+            inputActions.Player.Look.Enable();
         }
     }
 }

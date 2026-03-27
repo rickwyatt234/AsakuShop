@@ -17,6 +17,7 @@ namespace AsakuShop.Player
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #region Fields
         public Transform playerCamera;
+        public Transform player;
 
         public ItemInstance heldItem;
         public ItemPickup heldItemPickup;
@@ -57,6 +58,7 @@ namespace AsakuShop.Player
         private void Awake()
         {
             playerCamera = Camera.main.transform;
+            player = playerCamera.parent;
             input = GetComponent<IInputManager>();
             PlayerService.PickupTarget   = this;
             PlayerService.InputManager   = input;
@@ -144,7 +146,12 @@ namespace AsakuShop.Player
         {
             //Debug.Log($"[PICKUP] Called on {interactableObject.name}. interactPressedThisFrame: {interactPressedThisFrame}");
 
-            // Ignore recently dropped objects
+            if (GameStateController.Instance.CurrentPhase == GamePhase.Checkout)
+            {
+                //Debug.Log("[PICKUP] BLOCKED: Player is in Checkout phase");
+                return;
+            }
+
             if (interactableObject == recentlyDroppedObject)
             {
                 //Debug.Log("[PICKUP] IGNORED: Object was recently dropped");
@@ -951,6 +958,18 @@ namespace AsakuShop.Player
                 foreach (Collider col in obj.GetComponentsInChildren<Collider>())
                     col.enabled = true;
             }
+        }
+
+        public Transform GetTransform()
+        {            
+            if (PlayerService.PickupTarget is MonoBehaviour mb)
+            {
+                Transform current = mb.transform;
+                while (current.parent != null)
+                    current = current.parent;
+                return current;
+            }
+            return null;
         }
 #endregion
 

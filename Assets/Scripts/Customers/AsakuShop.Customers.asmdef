@@ -5,7 +5,8 @@
         "AsakuShop.Core",
         "AsakuShop.Items",
         "AsakuShop.Store",
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "AsakuShop.Storage"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

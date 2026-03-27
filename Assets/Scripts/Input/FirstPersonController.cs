@@ -120,8 +120,18 @@ namespace AsakuShop.Input
 
             private void Update()
             {
-                if (GameStateController.Instance.CurrentPhase != GamePhase.Playing)
+                var phase = GameStateController.Instance.CurrentPhase;
+
+                if (phase == GamePhase.Checkout)
+                {
+                    // During checkout, the player should still be able to look around, but movement and interactions are disabled. 
+                    HandleRotation();
                     return;
+                }
+
+                if (phase != GamePhase.Playing)
+                    return;
+                    
                 if (InventoryState.IsOpen)
                     return;
 

@@ -22,7 +22,12 @@ namespace AsakuShop.Customers
         {
             if (mainCam == null) mainCam = Camera.main;
             if (mainCam == null) return;
-            transform.forward = mainCam.transform.forward;
+            
+            // Only rotate the text to face camera, not the character
+            if (dialogText != null)
+            {
+                dialogText.transform.forward = mainCam.transform.forward;
+            }
         }
 
         //Displays a speech-bubble style message that auto-clears after <paramref name="duration"/> seconds.

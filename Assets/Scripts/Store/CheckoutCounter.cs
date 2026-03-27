@@ -1,13 +1,11 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using Unity.Cinemachine;
 using AsakuShop.Core;
 using AsakuShop.Economy;
-using AsakuShop.Items;
 
 namespace AsakuShop.Store
 {
@@ -17,28 +15,39 @@ namespace AsakuShop.Store
     public class CheckoutCounter : MonoBehaviour, IInteractable
     {
         // ── Inspector ─────────────────────────────────────────────────────────
-        [Header("Queue")]
-        [SerializeField] private Vector3 checkoutPoint;
-        [SerializeField] private Vector3 liningDirection = Vector3.left;
+    [Header("Queue")]
+        [Tooltip("The point where customers line up for checkout. Relative to counter transform.")]
+            [SerializeField] private Vector3 checkoutPoint;
 
-        [Header("Belt & Packing")]
-        [SerializeField] private Bounds  placementBounds;
-        [SerializeField] private int     maxPlacementAttempts = 100;
-        [SerializeField] private Vector3 packingPoint;
+        [Tooltip("Direction that customers line up in. Should be parallel to the counter front.")]
+            [SerializeField] private Vector3 liningDirection = Vector3.left;
 
-        [Header("Player Snap")]
-        [SerializeField] private Transform cashierStandPoint;
+    [Header("Belt & Packing")]
+        
+        [Tooltip("Bounds within which products are placed on the belt. Relative to counter transform.")]
+            [SerializeField] private Bounds  placementBounds;
 
-        [Header("Cinemachine")]
-        [SerializeField] private CinemachineCamera cashierCamera;
+        [Tooltip("Number of attempts to find a non-overlapping position for belt items. Placement fails after this many attempts, and the item is spawned anyway.")]
+            [SerializeField] private int     maxPlacementAttempts = 100;
+
+        [Tooltip("Point where items move to when scanned, before being destroyed. Relative to counter transform.")]
+            [SerializeField] private Vector3 packingPoint;
+
+    [Header("Player Snap")]
+        [Tooltip("Point where the player stands when operating the counter. Used for queue positioning and camera look direction.")]
+            [SerializeField] private Transform cashierStandPoint;
 
         [Header("Monitor")]
-        [SerializeField] private TextMeshPro monitorText;
+            [Tooltip("Text mesh pro component used to display information on the checkout monitor.")]
+                [SerializeField] private TextMeshProUGUI monitorText;
 
         [Header("Drag Handler & Snap Zones")]
-        [SerializeField] private CheckoutDragHandler checkoutDragHandler;
-        [SerializeField] private Transform           scanZoneTransform;
-        [SerializeField] private Transform           bagZoneTransform;
+                [SerializeField] private CheckoutDragHandler checkoutDragHandler;
+                [SerializeField] private Transform           scanZoneTransform;
+                [SerializeField] private Transform           bagZoneTransform;
+
+        private Vector3 savedPlayerPosition;
+        private Quaternion savedPlayerRotation;
 
         // ── State ─────────────────────────────────────────────────────────────
         public enum State { Standby, Placing, Scanning, CashPay, CardPay }
@@ -83,14 +92,16 @@ namespace AsakuShop.Store
         {
             StoreManager.Instance?.RegisterCounter(this);
         }
-
         private void Update()
         {
-            // ESC handling removed — exit is now driven by the Cancel input action
-            // added to InputMappings (handled via IInputManager by the caller).
+            // Exit checkout mode if Cancel is pressed while at counter
+            if (playerAtCounter && PlayerService.InputManager?.cancel == true)
+            {
+                ExitCheckoutMode();
+            }
         }
 
-        // ── IInteractable ────────────────────────────────────────────────────
+#region IInteractable Implementation
 
         public void OnInteract()
         {
@@ -100,19 +111,42 @@ namespace AsakuShop.Store
 
         public void OnExamine() { }
 
-        // ── Checkout mode ─────────────────────────────────────────────────────
+        public void OnCancel()
+        {
+            if (playerAtCounter)
+            {
+                ExitCheckoutMode();
+            }
+        }
+#endregion
+
+
 
         private void EnterCheckoutMode()
         {
             playerAtCounter = true;
 
-            if (cashierCamera != null) cashierCamera.gameObject.SetActive(true);
+            GameStateController.Instance.RequestTransition(GamePhase.Checkout);
 
-            // Lock player movement while at the counter.
+            Transform playerRoot = PlayerService.PickupTarget?.GetTransform();
+            
+            if (playerRoot != null)
+            {
+                savedPlayerPosition = playerRoot.position;
+                savedPlayerRotation = playerRoot.rotation;
+                
+                if (cashierStandPoint != null)
+                {
+                    playerRoot.position = cashierStandPoint.position;
+                    playerRoot.rotation = cashierStandPoint.rotation;
+                }
+            }
+            
+            PlayerService.InputManager?.EnableLookInput();
             PlayerService.InputManager?.DisableMovementInput();
 
-            // Wire up the drag handler snap zones now that we are in checkout mode.
             checkoutDragHandler?.Configure(scanZoneTransform, bagZoneTransform);
+            PlayerService.PickupTarget?.TryPickupInteractable(null);
 
             Debug.Log("[CheckoutCounter] Player entered checkout mode.");
         }
@@ -121,9 +155,17 @@ namespace AsakuShop.Store
         {
             playerAtCounter = false;
 
-            if (cashierCamera != null) cashierCamera.gameObject.SetActive(false);
-
-            // Release player movement lock.
+            GameStateController.Instance.RequestTransition(GamePhase.Playing);
+            
+            Transform playerRoot = PlayerService.PickupTarget?.GetTransform();
+            
+            if (playerRoot != null)
+            {
+                playerRoot.position = savedPlayerPosition;
+                playerRoot.rotation = savedPlayerRotation;
+            }
+            
+            PlayerService.InputManager?.EnableLookInput();
             PlayerService.InputManager?.EnableMovementInput();
 
             Debug.Log("[CheckoutCounter] Player exited checkout mode.");
@@ -310,15 +352,18 @@ namespace AsakuShop.Store
         private void OnDrawGizmosSelected()
         {
             // Checkout queue point
+            // Draw the checkout point as a wire sphere in world space, accounting for the counter's transform.
             Gizmos.color = Color.magenta;
             Vector3 worldCheckoutPt = transform.TransformPoint(checkoutPoint);
             Gizmos.DrawWireSphere(worldCheckoutPt, 0.2f);
 
             // Packing point
+            // Draw the packing point as a wire sphere in world space, accounting for the counter's transform.
             Gizmos.color = Color.blue;
             Gizmos.DrawWireSphere(transform.TransformPoint(packingPoint), 0.2f);
 
             // Placement bounds
+            // Draw the placement bounds as a wire cube in world space, accounting for the counter's transform and rotation.
             Vector3 worldCenter = transform.TransformPoint(placementBounds.center);
             Gizmos.matrix = Matrix4x4.TRS(worldCenter, transform.rotation, Vector3.one);
             Gizmos.color  = Color.yellow;

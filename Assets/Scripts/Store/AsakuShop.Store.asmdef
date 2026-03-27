@@ -7,7 +7,9 @@
         "AsakuShop.Economy",
         "AsakuShop.Storage",
         "Unity.TextMeshPro",
-        "Unity.Cinemachine"
+        "Unity.Cinemachine",
+        "DOTween.Modules",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
