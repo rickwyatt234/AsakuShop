@@ -27,8 +27,6 @@ namespace AsakuShop.Economy
             });
         }
 
-        // ── Balance ──────────────────────────────────────────────────────────
-        [SerializeField] private int startingBalance = 50000;
         private int balance;
 
         /// <summary>Player's current yen balance.</summary>
@@ -60,8 +58,7 @@ namespace AsakuShop.Economy
             }
             Instance = this;
             DontDestroyOnLoad(gameObject);
-
-            balance = startingBalance;
+            balance = GameConfig.Instance.StartingMoney;
             Today   = new DailyLedger(0);
 
             // Register so SaveManager captures and restores economy state on save/load.

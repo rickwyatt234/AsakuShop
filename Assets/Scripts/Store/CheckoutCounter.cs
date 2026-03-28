@@ -88,7 +88,7 @@ namespace AsakuShop.Store
 
 
         //Yen denomination list (for CashPay reference)
-        private static readonly int[] YenDenominations = { 10000, 5000, 1000, 500, 100, 50, 10, 5, 1 };
+        private static readonly int[] YenDenominations = { 10000, 5000, 2000, 1000, 100, 50, 10, 5, 1 };
 
 #region Unity Lifecycle
         private void Awake()

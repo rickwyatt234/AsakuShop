@@ -2,6 +2,7 @@ using UnityEngine;
 
 namespace AsakuShop.Core
 {
+    [CreateAssetMenu(fileName = "GameConfig", menuName = "AsakuShop/Game Config", order = 1)]
     public class GameConfig : ScriptableObject
     {
 #region Singleton pattern
@@ -17,7 +18,7 @@ namespace AsakuShop.Core
 
                     if (_instance == null)
                     {
-                        Debug.LogError("GameConfig not found in Resources!\nPlease create one using Tools > Checkout Frenzy > Game Config.");
+                        Debug.LogError("GameConfig not found in Resources!\nPlease create one using Tools > AsakuShop > Game Config.");
                     }
                 }
                 return _instance;
