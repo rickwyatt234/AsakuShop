@@ -329,7 +329,7 @@ namespace AsakuShop.Store
             Debug.Log("[CheckoutCounter] Payment confirmed.");
         }
 
-        // Called by CardReaderInteractable when the player interacts with the card reader.
+        // Called by CustomerCardInteractable when the player interacts with the customer's card.
         public void BeginCardPayment()
         {
             if (CurrentState != State.CardPay || paymentTerminal == null) return;
