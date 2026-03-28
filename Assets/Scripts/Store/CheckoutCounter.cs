@@ -48,6 +48,12 @@ namespace AsakuShop.Store
                 [SerializeField] private Transform           scanZoneTransform;
                 [SerializeField] private Transform           bagZoneTransform;
 
+        [Header("Payment Apparatus")]
+                [Tooltip("PaymentTerminal component on the card reader 3D object.")]
+                [SerializeField] private PaymentTerminal paymentTerminal;
+                [Tooltip("CashRegister component on the cash register 3D object.")]
+                [SerializeField] private CashRegister    cashRegister;
+
         [Header("Player Snapping")]
                 private Vector3 savedPlayerPosition;
                 private Quaternion savedPlayerRotation;
@@ -158,6 +164,12 @@ namespace AsakuShop.Store
         private void ExitCheckoutMode()
         {
             playerAtCounter = false;
+
+            // Close any open payment UIs and zoom cameras before restoring the player.
+            paymentTerminal?.Close();
+            cashRegister?.Close();
+
+            RemoveCustomerCashInteractable();
 
             GameStateController.Instance.RequestTransition(GamePhase.Playing);
             
@@ -278,7 +290,15 @@ namespace AsakuShop.Store
 
             UpdateMonitorText();
 
-            // Wait until the player confirms payment by giving change if any, or confirming on the card terminal.
+            // For cash payments, make the customer's money interactable so the player can
+            // click it to open the cash register.
+            if (useCash && currentCustomer is MonoBehaviour customerMb)
+            {
+                var cashInteractable = customerMb.gameObject.AddComponent<CustomerCashInteractable>();
+                cashInteractable.Initialize(this);
+            }
+
+            // Wait until the player confirms payment by giving change (if any), or confirming on the card terminal.
             confirmPayment = false;
             Debug.Log($"[CheckoutCounter] Awaiting payment confirmation. Total: ¥{totalPrice:N0}, Customer pays: ¥{customerPayment:N0}.");
             yield return new WaitUntil(() => confirmPayment || !playerAtCounter);
@@ -307,6 +327,55 @@ namespace AsakuShop.Store
             if (!playerAtCounter) return;
             confirmPayment = true;
             Debug.Log("[CheckoutCounter] Payment confirmed.");
+        }
+
+        // Called by CardReaderInteractable when the player interacts with the card reader.
+        public void BeginCardPayment()
+        {
+            if (CurrentState != State.CardPay || paymentTerminal == null) return;
+
+            // Guard against double-subscription.
+            paymentTerminal.OnPaymentComplete -= HandlePaymentComplete;
+            paymentTerminal.OnPaymentComplete += HandlePaymentComplete;
+
+            paymentTerminal.Open(totalPrice);
+            Debug.Log($"[CheckoutCounter] Card payment started. Amount: ¥{totalPrice:N0}.");
+        }
+
+        // Called by CustomerCashInteractable when the player interacts with the customer's cash.
+        public void BeginCashPayment()
+        {
+            if (CurrentState != State.CashPay || cashRegister == null) return;
+
+            // Guard against double-subscription.
+            cashRegister.OnPaymentComplete -= HandlePaymentComplete;
+            cashRegister.OnPaymentComplete += HandlePaymentComplete;
+
+            int changeOwed = customerPayment - totalPrice;
+            cashRegister.Open(changeOwed);
+            Debug.Log($"[CheckoutCounter] Cash payment started. Change owed: ¥{changeOwed:N0}.");
+        }
+
+        // Shared callback fired by either the PaymentTerminal or the CashRegister on completion.
+        private void HandlePaymentComplete()
+        {
+            // Unsubscribe to avoid stale references on the next transaction.
+            if (paymentTerminal != null) paymentTerminal.OnPaymentComplete -= HandlePaymentComplete;
+            if (cashRegister    != null) cashRegister.OnPaymentComplete    -= HandlePaymentComplete;
+
+            RemoveCustomerCashInteractable();
+
+            ConfirmPayment();
+        }
+
+        // Removes the temporary CustomerCashInteractable from the current customer if present.
+        private void RemoveCustomerCashInteractable()
+        {
+            if (currentCustomer is MonoBehaviour customerMb)
+            {
+                var cashInteractable = customerMb.GetComponent<CustomerCashInteractable>();
+                if (cashInteractable != null) Destroy(cashInteractable);
+            }
         }
         
 
