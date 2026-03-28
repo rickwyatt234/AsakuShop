@@ -112,6 +112,17 @@ namespace AsakuShop.Store
             RefreshDisplay();
         }
 
+        // Programmatically triggers the active confirm action.
+        // Use this from a CardReaderButton (buttonInput = "confirm") placed over the green button on the mesh.
+        // If the success panel is showing, presses the Final Confirm; otherwise presses the Entry Confirm.
+        public void TryConfirm()
+        {
+            if (successPanel != null && successPanel.activeSelf)
+                HandleFinalConfirm();
+            else
+                HandleEntryConfirm();
+        }
+
         private void HandleEntryConfirm()
         {
             if (!inputEnabled) return;
