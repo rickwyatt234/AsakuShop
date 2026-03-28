@@ -2,7 +2,6 @@ using DG.Tweening;
 using TMPro;
 using Unity.Cinemachine;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace AsakuShop.Store
 {
@@ -12,17 +11,18 @@ namespace AsakuShop.Store
     //     1. Camera zooms in on the cash register keypad.
     //     2. Player reads the total and customer's tendered amount from the display,
     //        then types the tendered amount using world-space numpad buttons (via Append()).
-    //     3. Player presses the Cash/Tend button (confirmButton) → cash drawer opens,
-    //        camera shifts down to the drawer view.
+    //     3. Player presses the Cash/Tend button (CashRegisterButton with buttonInput "confirm")
+    //        → cash drawer opens, camera shifts down to the drawer view.
     //
     //   Phase 2 — Change:
     //     4. Player clicks denomination drawer slots (via AddChange()) to accumulate change.
-    //     5. When changeGiven >= changeOwed (or changeOwed == 0), the Final Confirm button activates.
-    //     6. Player presses Final Confirm → drawer closes, camera zooms out, OnPaymentComplete fires.
+    //     5. When changeGiven >= changeOwed (or changeOwed == 0), TryFinalConfirm() succeeds.
+    //     6. Player presses Final Confirm (CashRegisterButton with buttonInput "finalconfirm")
+    //        → drawer closes, camera zooms out, OnPaymentComplete fires.
     //
-    // World-space numpad buttons: wire each Button.onClick to call Append("0")–Append("9").
-    // Wire the backspace button to Append("back"), the Clear (C) button to ClearEntry(),
-    // and each denomination drawer's IInteractable.OnInteract to AddChange(denominationAmount).
+    // World-space numpad buttons: attach CashRegisterButton to each invisible BoxCollider child
+    // placed over the physical key face. Set buttonInput to "0"–"9", "back", "clear",
+    // "confirm", or "finalconfirm". Denomination drawer slots use CashDrawerButton as before.
     //
     // All amounts are whole yen (int). No fractions, no decimals.
     public class CashRegister : MonoBehaviour
@@ -50,12 +50,6 @@ namespace AsakuShop.Store
         private TMP_Text changeOwedText;
         [SerializeField, Tooltip("Live display of the amount being keyed in by the player.")]
         private TMP_Text displayText;
-        [SerializeField, Tooltip("Removes the last keyed digit (backspace). Wire onClick → Append(\"back\").")]
-        private Button undoButton;
-        [SerializeField, Tooltip("Clears the entire keyed entry. Wire onClick → ClearEntry().")]
-        private Button clearButton;
-        [SerializeField, Tooltip("The Cash/Tend button. Confirms the tendered amount and opens the drawer.")]
-        private Button confirmButton;
 
         [Header("UI — Change Panel")]
         [SerializeField, Tooltip("Root panel shown during the change-giving phase (drawer open).")]
@@ -64,9 +58,6 @@ namespace AsakuShop.Store
         private TMP_Text changeGivenText;
         [SerializeField, Tooltip("Shows how much change the player has accumulated so far (e.g. 'Given: ¥500').")]
         private TMP_Text changeAccumulatedText;
-        [SerializeField, Tooltip("Enabled once changeGiven >= changeOwed (or changeOwed == 0). " +
-            "Wired automatically in Awake — do not wire manually.")]
-        private Button finalConfirmButton;
 
         [Header("Drawer")]
         [SerializeField, Tooltip("CashDrawer component on the physical drawer GameObject.")]
@@ -91,11 +82,6 @@ namespace AsakuShop.Store
         {
             entryPanel?.SetActive(false);
             changePanel?.SetActive(false);
-
-            undoButton?.onClick.AddListener(() => Append("back"));
-            clearButton?.onClick.AddListener(ClearEntry);
-            confirmButton?.onClick.AddListener(HandleEntryConfirm);
-            finalConfirmButton?.onClick.AddListener(HandleFinalConfirm);
 
             if (zoomCamera != null)
             {
@@ -131,7 +117,6 @@ namespace AsakuShop.Store
             entryPanel?.SetActive(true);
             changePanel?.SetActive(false);
             RefreshDisplay();
-            RefreshConfirmButton();
 
             if (zoomCamera   != null) zoomCamera.Priority   = zoomedPriority;
             if (drawerCamera != null) drawerCamera.Priority  = defaultPriority;
@@ -140,7 +125,6 @@ namespace AsakuShop.Store
             {
                 if (currentPhase != Phase.Entry) return;
                 inputEnabled = true;
-                RefreshConfirmButton();
             });
         }
 
@@ -161,8 +145,7 @@ namespace AsakuShop.Store
         }
 
         // Appends a digit, or "back" to delete the last character (entry phase only).
-        // Wire each numpad button's onClick to call this with the button's digit string.
-        // Wire the backspace button to call Append("back").
+        // Called by CashRegisterButton with buttonInput "0"–"9" or "back".
         public void Append(string input)
         {
             if (!inputEnabled || currentPhase != Phase.Entry) return;
@@ -178,18 +161,16 @@ namespace AsakuShop.Store
             }
 
             RefreshDisplay();
-            RefreshConfirmButton();
         }
 
         // Clears the entire keyed entry (entry phase only).
-        // Wire the Clear (C) button's onClick to this method.
+        // Called by CashRegisterButton with buttonInput "clear".
         public void ClearEntry()
         {
             if (!inputEnabled || currentPhase != Phase.Entry) return;
 
             enteredAmount = string.Empty;
             RefreshDisplay();
-            RefreshConfirmButton();
         }
 
         // Adds a denomination to the running change total (change phase only).
@@ -200,14 +181,13 @@ namespace AsakuShop.Store
 
             changeGiven += denomination;
             RefreshChangeDisplay();
-            RefreshFinalConfirmButton();
         }
 
-        // ── Private Handlers ────────────────────────────────────────────────
+        // ── Public Interaction Entry Points ─────────────────────────────────
 
-        // Fired by the Cash/Tend button (confirmButton) in the entry phase.
+        // Called by CashRegisterButton (buttonInput "confirm") — Cash/Tend button.
         // Opens the drawer and transitions to the change-giving phase.
-        private void HandleEntryConfirm()
+        public void TryConfirm()
         {
             if (!inputEnabled || currentPhase != Phase.Entry) return;
 
@@ -222,6 +202,18 @@ namespace AsakuShop.Store
 
             cashDrawer?.Open();
             TransitionToChangePhase();
+        }
+
+        // Called by CashRegisterButton (buttonInput "finalconfirm") — Final Confirm button.
+        // Completes the transaction once enough change has been given.
+        public void TryFinalConfirm()
+        {
+            if (currentPhase != Phase.Change) return;
+            if (changeOwed > 0 && changeGiven < changeOwed) return;
+
+            cashDrawer?.Close();
+            Close();
+            OnPaymentComplete?.Invoke();
         }
 
         // Switches the UI and camera from the keypad view to the drawer view.
@@ -239,18 +231,6 @@ namespace AsakuShop.Store
             // Shift camera down to the drawer area.
             if (zoomCamera   != null) zoomCamera.Priority   = defaultPriority;
             if (drawerCamera != null) drawerCamera.Priority  = zoomedPriority;
-
-            RefreshFinalConfirmButton();
-        }
-
-        // Fired by the Final Confirm button once enough change has been given.
-        private void HandleFinalConfirm()
-        {
-            if (currentPhase != Phase.Change) return;
-
-            cashDrawer?.Close();
-            Close();
-            OnPaymentComplete?.Invoke();
         }
 
         // ── Display Helpers ─────────────────────────────────────────────────
@@ -269,23 +249,6 @@ namespace AsakuShop.Store
         {
             if (changeGivenText      != null) changeGivenText.text      = $"Change owed: ¥{changeOwed:N0}";
             if (changeAccumulatedText != null) changeAccumulatedText.text = $"Given: ¥{changeGiven:N0}";
-        }
-
-        private void RefreshConfirmButton()
-        {
-            if (confirmButton == null) return;
-            // Enabled once the camera has settled and the player has keyed in something
-            // (or no change is owed so the entry is trivially valid).
-            confirmButton.interactable = inputEnabled &&
-                (changeOwed == 0 || !string.IsNullOrEmpty(enteredAmount));
-        }
-
-        private void RefreshFinalConfirmButton()
-        {
-            if (finalConfirmButton == null) return;
-            // Active only when the accumulated change covers what is owed,
-            // or no change is required at all.
-            finalConfirmButton.interactable = changeOwed == 0 || changeGiven >= changeOwed;
         }
     }
 }
