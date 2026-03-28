@@ -278,9 +278,7 @@ namespace AsakuShop.Store
 
             UpdateMonitorText();
 
-            // Wait until the player confirms payment via the Confirm input action
-            // (wired up in InputMappings and handled by the caller / UI), or
-            // until the player leaves the counter (playerAtCounter becomes false).
+            // Wait until the player confirms payment by giving change if any, or confirming on the card terminal.
             confirmPayment = false;
             Debug.Log($"[CheckoutCounter] Awaiting payment confirmation. Total: ¥{totalPrice:N0}, Customer pays: ¥{customerPayment:N0}.");
             yield return new WaitUntil(() => confirmPayment || !playerAtCounter);
@@ -304,16 +302,16 @@ namespace AsakuShop.Store
         }
 #endregion
 
+        public void ConfirmPayment()
+        {
+            if (!playerAtCounter) return;
+            confirmPayment = true;
+            Debug.Log("[CheckoutCounter] Payment confirmed.");
+        }
+        
 
 
 
-
-
-        // Called externally (e.g. from an input action handler or UI button) to confirm
-        // the current payment and advance the checkout flow.
-        public void ConfirmPayment() => confirmPayment = true;
-
-        // Called externally (e.g. from the Cancel input action) to exit checkout mode.
         public void RequestExit() => ExitCheckoutMode();
 
         // ── Helpers ───────────────────────────────────────────────────────────

@@ -392,22 +392,6 @@ namespace AsakuShop.Customers
             animator.SetBool("IsMoving", true);
             return false;
         }
-        private void LogEntry(string message)
-        {
-            if (!debugEntryLogs) return;
-            Debug.Log($"[Customer:{name}] {message}");
-        }
-
-        private void UpdateAnimator()
-        {
-            if (animator == null) return;
-            
-            bool hasPath = agent.hasPath;
-            float remainingDist = agent.remainingDistance;
-            
-            bool isMoving = hasPath && remainingDist > agent.stoppingDistance && !float.IsInfinity(remainingDist);
-            animator.SetBool("IsMoving", isMoving);
-        }
 
 
     }

@@ -8,7 +8,7 @@ namespace AsakuShop.Store
     public class CheckoutDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
         [SerializeField] private LayerMask checkoutItemLayerMask;
-        [SerializeField] private float snapThreshold = 0.3f;
+        
 
         [Header("Snap Zone Transforms (set by CheckoutCounter)")]
         [SerializeField] private Transform scanZoneTransform;
@@ -71,21 +71,22 @@ namespace AsakuShop.Store
             }
 
             //Check for snap zones
-            Collider[] nearbyColliders = Physics.OverlapSphere(draggingItem.transform.position, snapThreshold);
+            //OverlapSphere with radius equal to the diagonal of the item's bounding box, to catch any snap zones within range regardless of item orientation.
+            Collider[] nearbyColliders = Physics.OverlapSphere(draggingItem.transform.position, draggingItem.GetComponent<Collider>().bounds.extents.magnitude, checkoutItemLayerMask); 
             foreach (Collider col in nearbyColliders)
             {
                if (col.transform == scanZoneTransform)
                 {
                     if (draggingItem.CanSnapToScanZone())
                     {
-                            draggingItem.OnScanned();
+                        draggingItem.SnapToScanZone();
                     }
                 }
                 else if (col.transform == bagZoneTransform)
                 {
                     if (draggingItem.CanSnapToBagZone())
-                    {
-                        draggingItem.OnBagged();
+                    {                        
+                        draggingItem.SnapToBagZone();
                     }
                 }
             }
@@ -93,7 +94,7 @@ namespace AsakuShop.Store
             draggingRb   = null;
 
             // // Check proximity to snap zones
-            // bool snappedToScan = scanZoneTransform != null
+            // bool snappedToScan = scanZoneTransform ! = null
             //     && Vector3.Distance(draggingItem.transform.position, scanZoneTransform.position) <= snapThreshold;
             // bool snappedToBag  = bagZoneTransform  != null
             //     && Vector3.Distance(draggingItem.transform.position, bagZoneTransform.position) <= snapThreshold;
