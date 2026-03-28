@@ -6,6 +6,7 @@ using DG.Tweening;
 using AsakuShop.Core;
 using AsakuShop.Items;
 using AsakuShop.Store;
+using AsakuShop.Storage;
 
 namespace AsakuShop.Customers
 {
@@ -14,102 +15,71 @@ namespace AsakuShop.Customers
     /// Implements ICheckoutCustomer so CheckoutCounter can process this customer.
     /// Implements IAskToLeave + IPedestrianCustomer for StoreManager to control.
     [RequireComponent(typeof(Animator), typeof(NavMeshAgent))]
-    public class Customer : MonoBehaviour,
-        ICheckoutCustomer,
-        IAskToLeave,
-        IPedestrianCustomer
+    public class Customer : MonoBehaviour, ICheckoutCustomer
     {
-        // ── Constants ─────────────────────────────────────────────────────────
+
+        [Header("NavmeshAgent Settings")]
         private const float WALK_SPEED              = 1.5f;
         private const float CONTINUE_SHOPPING_CHANCE = 0.5f;
         private const float STOPPING_DISTANCE       = 0.6f;
         private const float ARRIVED_THRESHOLD       = 0.8f;
 
-        // ── Inspector ─────────────────────────────────────────────────────────
+
+        //Behavior Flag
+        public event System.Action OnLeave;
+
+
         [Header("References")]
         [SerializeField] private CustomerHandAttachments handAttachments;
         [SerializeField] private CustomerOverheadUI      overheadUI;
+        private Animator animator;
+        private NavMeshAgent agent;
+        private ShelfComponent targetShelf;
+        private CheckoutCounter targetCounter;
+        private int queueNumber = int.MaxValue;
+        private bool isPicking = false;
 
         [Header("Dialogue")]
-        [SerializeField] private Dialogue notFoundDialogue;
-        [SerializeField] private Dialogue overpricedDialogue;
+        private Dialogue notFoundDialogue => GameConfig.Instance.NotFoundDialogue;
+        private Dialogue overpricedDialogue => GameConfig.Instance.OverpricedDialogue;
 
-        // ── Runtime state ─────────────────────────────────────────────────────
-        public bool wantsToShop { get; private set; }
-
-        // ICheckoutCustomer
+        [Header("Inventory")]
         public List<ItemInstance> Inventory { get; private set; } = new List<ItemInstance>();
 
-        private Animator      animator;
-        private NavMeshAgent  agent;
-        private MonoBehaviour targetShelf; // WallShelf — typed as MonoBehaviour to keep the assembly linear
-        private bool          isLeaving;
-        private bool          askedToLeave;
-        private Coroutine     shoppingCoroutine;
 
         [Header("Debug")]
         [SerializeField] private bool debugEntryLogs = true;
 
-        // ── Lifecycle ─────────────────────────────────────────────────────────
+
+#region Unity Lifecycle
 
         private void Awake()
         {
             animator = GetComponent<Animator>();
             agent    = GetComponent<NavMeshAgent>();
 
-            // Ensure the agent starts on the NavMesh using Warp (no pathfinding)
-            if (NavMesh.SamplePosition(transform.position, out NavMeshHit hit, 2f, NavMesh.AllAreas))
-            {
-                agent.Warp(hit.position);
-            }
-
-            agent.areaMask = NavMesh.AllAreas;
-
             agent.speed                  = WALK_SPEED;
             agent.angularSpeed           = 3600f;
             agent.acceleration           = 100f;
             agent.stoppingDistance       = STOPPING_DISTANCE;
             agent.obstacleAvoidanceType  = ObstacleAvoidanceType.NoObstacleAvoidance;
+            agent.SetAreaCost(3, 50f);
         }
 
         private void Start()
         {
-            StoreManager.Instance?.RegisterPedestrian();
-            StartCoroutine(PedestrianLoop());
+            StartCoroutine(CheckEnteringStore());
+            StartCoroutine(Shopping());
         }
 
         private void Update()
         {
             CheckStoreDoors();
-            UpdateAnimator();
         }
+#endregion
 
-        // ── IPedestrianCustomer ───────────────────────────────────────────────
 
-        public void SetWantsToShop(bool value) => wantsToShop = value;
-
-        // ── IAskToLeave ───────────────────────────────────────────────────────
-
-        public void AskToLeave()
-        {
-            askedToLeave = true;
-            if (Inventory.Count == 0 && shoppingCoroutine != null)
-            {
-                StopCoroutine(shoppingCoroutine);
-                shoppingCoroutine = null;
-                StartCoroutine(Leave());
-            }
-        }
-
-        // ── ICheckoutCustomer ─────────────────────────────────────────────────
-
-        public void OnCheckoutComplete()
-        {
-            Inventory.Clear();
-        }
-
-        // ── Door detection ────────────────────────────────────────────────────
-
+#region Door Interaction
         private void CheckStoreDoors()
         {
             Vector3 origin    = transform.position + Vector3.up * 0.8f;
@@ -124,256 +94,199 @@ namespace AsakuShop.Customers
                 if (door != null) door.OpenIfClosed();
             }
         }
+#endregion
 
-        // ── AI Loops ──────────────────────────────────────────────────────────
 
-        private IEnumerator PedestrianLoop()
+#region Coroutines
+        private IEnumerator CheckEnteringStore()
         {
-            if (StoreManager.Instance == null)
+            while (!StoreManager.Instance.IsWithinStore(transform.position))
             {
-                LogEntry("No StoreManager instance found. Aborting.");
-                yield break;
+                yield return new WaitForSeconds(0.1f);
             }
 
-            // If we don't want to shop, just wander indefinitely
-            if (!wantsToShop)
-            {
-                //LogEntry("Spawned as pedestrian only. Will wander instead of entering the store.");
-                yield return WanderForever();
-                yield break;
-            }
-
-            LogEntry($"Trying to enter store. startPos={transform.position}, insideBounds={StoreManager.Instance.IsWithinStore(transform.position)}");
-
-            while (!StoreManager.Instance.IsWithinStore(transform.position) && !askedToLeave)
-            {
-                Vector3 dest = StoreManager.Instance.GetEntryPoint();
-                bool wasInside = StoreManager.Instance.IsWithinStore(transform.position);
-
-                LogEntry($"Heading toward store entry. currentPos={transform.position}, entryTarget={dest}, insideBounds={wasInside}");
-                agent.SetDestination(dest);
-
-                yield return new WaitUntil(() =>
-                    HasArrived() ||
-                    StoreManager.Instance.IsWithinStore(transform.position) ||
-                    askedToLeave);
-
-                bool hasArrived = HasArrived();
-                bool isInside = StoreManager.Instance.IsWithinStore(transform.position);
-
-                LogEntry($"Entry step finished. currentPos={transform.position}, arrived={hasArrived}, insideBounds={isInside}, askedToLeave={askedToLeave}");
-
-                if (isInside)
-                    LogEntry("Entered store bounds.");
-
-                if (hasArrived && !isInside)
-                    LogEntry("Reached entry target but still outside store bounds. Proceeding anyway.");
-
-                if (hasArrived)
-                    break;
-
-                if (!isInside)
-                    yield return new WaitForSeconds(Random.Range(0.5f, 2f));
-            }
-
-            if (askedToLeave)
-            {
-                LogEntry("Asked to leave before shopping started.");
-                yield return Leave();
-                yield break;
-            }
-
-            LogEntry("Commencing shopping.");
-            CoreEvents.RaiseCustomerEntered(this);
-            overheadUI?.ShowStatus("🛒");
-            StoreManager.Instance.RegisterShopper(this);
-
-            shoppingCoroutine = StartCoroutine(ShoppingLoop());
-            yield return shoppingCoroutine;
+            //Play a SFX or something here to indicate the customer has entered the store
         }
 
-        private IEnumerator WanderForever()
+        private IEnumerator Shopping()
         {
-            while (!isLeaving)
-            {
-                if (StoreManager.Instance == null) yield break;
+            bool continueShopping = true;
 
-                Vector3 dest = StoreManager.Instance.GetWanderPoint();
-                agent.SetDestination(dest);
-                yield return new WaitUntil(() => HasArrived());
-                yield return new WaitForSeconds(Random.Range(2f, 6f));
-            }
-        }
-
-        private IEnumerator ShoppingLoop()
-        {
-            bool keepShopping = true;
-
-            while (keepShopping && !askedToLeave)
+            while (continueShopping)
             {
                 yield return FindShelf();
+                yield return BrowseShelf();
 
-                if (targetShelf != null)
-                    yield return BrowseShelf();
-
-                keepShopping = Random.value < CONTINUE_SHOPPING_CHANCE;
+                // Random chance to continue shopping after each item
+                continueShopping = Random.value < CONTINUE_SHOPPING_CHANCE;
             }
 
-            if (askedToLeave)
+            if (targetShelf != null && targetShelf.IsOpen)
             {
-                yield return Leave();
-                yield break;
+                // Close the shelving unit if it's open (e.g., Fridges, Freezers)
+                targetShelf.Close(true, false);
             }
 
             if (Inventory.Count > 0)
+            {
                 yield return Checkout();
+                yield return Leave();
+            }
             else
             {
-                string line = notFoundDialogue != null
-                    ? notFoundDialogue.GetRandomLine()
-                    : "Nothing for me today...";
-                overheadUI?.ShowDialog(line);
+                // Customer leaves without buying anything
+                overheadUI.ShowDialog(notFoundDialogue.GetRandomLine());
+                yield return Leave();
             }
-
-            yield return Leave();
         }
 
         private IEnumerator FindShelf()
         {
-            if (StoreManager.Instance == null) yield break;
+            ShelfComponent shelf = StoreManager.Instance.GetRandomShelf();
 
-            targetShelf = StoreManager.Instance.GetRandomShelf();
-            if (targetShelf == null) yield break;
-
-            // Claim the shelf so other customers don't pile on it
-            StoreManager.Instance.UnregisterShelf(targetShelf);
-
-            // TODO: WallShelf must expose a FrontPoint property (Vector3).
-            // Replace the line below with: agent.SetDestination(((WallShelf)targetShelf).FrontPoint);
-#pragma warning disable CS0168
-            Vector3 destination;
-            try
+            if (targetShelf != null && targetShelf != shelf && targetShelf.IsOpen)
             {
-                // Duck-type call: look for IShelfFrontPoint interface or use transform.position as fallback
-                var frontPointProvider = targetShelf as IShelfFrontPoint;
-                destination = frontPointProvider != null
-                    ? frontPointProvider.FrontPoint
-                    : targetShelf.transform.position + targetShelf.transform.forward * 0.8f;
+                // Close the previous shelving unit if it's open (e.g., Fridges, Freezers)
+                targetShelf.Close(true, false);
             }
-            catch
-            {
-                destination = targetShelf.transform.position;
-            }
-#pragma warning restore CS0168
 
-            agent.SetDestination(destination);
-            yield return new WaitUntil(() => HasArrived());
-            yield return FaceTarget(targetShelf.transform);
+            targetShelf = shelf;
+
+            if (targetShelf == null)
+            {
+                Debug.LogWarning("[Customer] No shelves available.");
+                yield break;
+            }
+
+            StoreManager.Instance.UnregisterShelf(targetShelf); // Temporarily remove from pool while browsing
+            agent.SetDestination(targetShelf.transform.position + targetShelf.transform.forward * -0.5f);
+
+            while (!HasArrived())
+            {
+                if (targetShelf.IsMoving)
+                {
+                    agent.SetDestination(transform.position); // Stop moving if shelf is moving
+                    targetShelf = null;
+                    yield break;
+                }
+                yield return LookAt(targetShelf.transform);
+            }
         }
 
         private IEnumerator BrowseShelf()
         {
             if (targetShelf == null) yield break;
-
-            // TODO: WallShelf must expose PeekItem() → ItemInstance and TakeItem() → ItemInstance
-            // Replace the stub below once WallShelf has these methods.
-            ItemInstance item = null;
-            var itemProvider  = targetShelf as IShelfItemProvider;
-            if (itemProvider != null)
-                item = itemProvider.PeekItem();
-
-            if (item == null)
+            overheadUI.ShowStatus("👀");
+            while (true)
             {
-                // Shelf is empty — put it back and move on
-                StoreManager.Instance.RegisterShelf(targetShelf);
-                overheadUI?.ShowDialog("Hmm, nothing here.");
-                yield break;
-            }
-
-            // Decide whether to buy
-            if (IsWillingToBuy(item))
-            {
-                if (itemProvider != null)
-                    itemProvider.TakeItem();
-
-                Inventory.Add(item);
-                animator.SetTrigger("GrabItem");
-                overheadUI?.ShowStatus("✓");
-                yield return new WaitForSeconds(0.8f);
-            }
-            else
-            {
-                string line = overpricedDialogue != null
-                    ? overpricedDialogue.GetRandomLine().Replace("{item}", item.Definition.DisplayName)
-                    : $"{item.Definition.DisplayName} is too expensive!";
-                overheadUI?.ShowDialog(line);
-                yield return new WaitForSeconds(1.5f);
-            }
-
-            // Return shelf to the pool
-            StoreManager.Instance.RegisterShelf(targetShelf);
-            targetShelf = null;
-        }
-
-        private IEnumerator Checkout()
-        {
-            if (StoreManager.Instance == null) yield break;
-
-            var counter = StoreManager.Instance.GetShortestQueueCounter();
-            if (counter == null)
-            {
-                Debug.LogWarning("[Customer] No checkout counter available.");
-                yield break;
-            }
-
-            counter.LiningCustomers.Add(this);
-            overheadUI?.ShowStatus("🧾");
-
-            // Walk to queue position
-            Vector3 queuePos = counter.GetQueuePosition(this, out Vector3 lookDir);
-            agent.SetDestination(queuePos);
-            yield return new WaitUntil(() => HasArrived());
-
-            // Face the cashier stand
-            if (lookDir != Vector3.zero)
-                yield return FaceDirection(lookDir);
-
-            // Wait for items to be placed and transaction to complete
-            yield return counter.PlaceProducts(this);
-            yield return new WaitUntil(() => counter.CurrentState == CheckoutCounter.State.Standby);
-        }
-
-        private IEnumerator Leave()
-        {
-            if (isLeaving) yield break;
-            isLeaving = true;
-
-            StoreManager.Instance?.UnregisterShopper(this);
-            StoreManager.Instance?.UnregisterPedestrian(); 
-            CoreEvents.RaiseCustomerLeft(this);
-
-            overheadUI?.ShowDialog("Bye!", 1.5f);
-            yield return new WaitForSeconds(1.5f);
-            overheadUI?.Hide();
-
-            if (StoreManager.Instance != null)
-            {
-                agent.SetDestination(StoreManager.Instance.GetExitPoint());
-                float timeout = 20f;
-                float elapsed = 0f;
-                while (!HasExitedStore() && elapsed < timeout)
+                if (targetShelf.IsMoving)
                 {
-                    elapsed += Time.deltaTime;
-                    yield return null;
+                    targetShelf = null;
+                    yield break;
+                }
+
+                // If shelf has items, there's a chance the customer will take one
+                if (targetShelf.PeekItem() != null)
+                {
+                    ItemInstance item = targetShelf.PeekItem();
+                    if (IsWillingToBuy(item))
+                    {
+                        overheadUI.ShowStatus("👍");
+
+
+                        ShelfTakeResult taken = targetShelf.TakeItem();
+                        if (!taken.HasItem)
+                        {
+                            yield return null;
+                            continue;
+                        }
+
+                        Inventory.Add(taken.Item);
+                        if (!targetShelf.IsOpen) targetShelf.Open(true, false);
+
+                        float height = targetShelf.transform.position.y;
+                        string pickTrigger = "PickMedium";
+                        if (height < 0.5f) pickTrigger = "PickLow";
+                        else if (height > 1.5f) pickTrigger = "PickHigh";
+                        animator.SetTrigger(pickTrigger);
+
+                        yield return new WaitUntil(() => isPicking);
+
+                        if (taken.Pickup != null)
+                        {
+                            Transform grip = handAttachments.Grip;
+                            Transform t = taken.Pickup.transform;
+
+                            t.SetParent(grip, true);
+
+                            if (taken.Pickup.TryGetComponent(out Rigidbody rb))
+                            {
+                                rb.isKinematic = true;
+                                rb.useGravity = false;
+                                rb.linearVelocity = Vector3.zero;
+                                rb.angularVelocity = Vector3.zero;
+                            }
+
+                            Collider[] cols = taken.Pickup.GetComponentsInChildren<Collider>(true);
+                            foreach (Collider c in cols) c.enabled = false;
+
+                            t.DOLocalRotate(Vector3.zero, 0.25f);
+                            t.DOLocalMove(Vector3.zero, 0.25f);
+                        }
+
+                        isPicking = false;
+
+                        bool isIdle = false;
+                        while (!isIdle)
+                        {
+                            isIdle = animator.GetCurrentAnimatorStateInfo(0).IsName("Idle");
+                            yield return null;
+                        }
+
+                        if (taken.Pickup != null)
+                            Destroy(taken.Pickup.gameObject);
+
+                        yield return new WaitForSeconds(0.5f);
+                    }
+                    else
+                    {
+                        overheadUI.ShowDialog(overpricedDialogue.GetRandomLine());
+                        yield return new WaitForSeconds(1f);
+                    }
                 }
             }
+        }
+#endregion
 
-            yield return new WaitForEndOfFrame();
-            Destroy(gameObject);
+
+#region MoveTo/LookAt Helpers
+        private IEnumerator MoveTo(Vector3 destination)
+        {
+            agent.SetDestination(destination);
+            yield return new WaitUntil(() => HasArrived());
+            yield return new WaitForSeconds(0.2f); // Small pause after arriving
         }
 
-        // ── Helpers ───────────────────────────────────────────────────────────
+        private IEnumerator LookAt(Transform target)
+        {
+            var lookDirection = (target.position - transform.position).Flatten();
+            var lookRotation = Quaternion.LookRotation(lookDirection);
+            yield return transform.DORotateQuaternion(lookRotation, 0.5f).WaitForCompletion();
+        }
 
+        private IEnumerator LookAt(Vector3 lookDirection)
+        {
+            var lookRotation = Quaternion.LookRotation(lookDirection.Flatten());
+            yield return transform.DORotateQuaternion(lookRotation, 0.5f).WaitForCompletion();
+        }
+        public void OnPick(AnimationEvent _)
+        {
+            isPicking = true;
+        }
+#endregion
+
+
+#region Decision Helpers
         private bool IsWillingToBuy(ItemInstance item)
         {
             // Tolerance follows a curve: customers rarely pay way over market price,
@@ -384,45 +297,95 @@ namespace AsakuShop.Customers
             int   askingPrice   = Mathf.RoundToInt(item.CurrentPrice);
             return askingPrice <= maxAcceptable;
         }
+#endregion
+
+
+#region Queueing, Checkout and Leaving
+        public IEnumerator UpdateQueue()
+        {
+            // While the customer's queue number is greater than 0 (meaning they are still in the queue).
+            while (queueNumber > 0)
+            {
+                int newQueueNumber = targetCounter.GetQueueNumber(this);
+
+                // Check if the customer's queue number has improved (become lower).
+                if (newQueueNumber < queueNumber)
+                {
+                    // Update the customer's queue number.
+                    queueNumber = newQueueNumber;
+
+                    Vector3 queuePosition = targetCounter.GetQueuePosition(this, out Vector3 lookDirection);
+
+                    // Move the customer to their new queue position.
+                    yield return MoveTo(queuePosition);
+
+                    // Make the customer look in the correct direction at their new position.
+                    yield return LookAt(lookDirection);
+                }
+                else
+                {
+                    // If the queue number hasn't improved, wait briefly before checking again.
+                    yield return new WaitForSeconds(0.1f);
+                }
+            }
+            // When the queueNumber is 0, this coroutine will stop.
+        }
+
+        private IEnumerator Checkout()
+        {
+            targetCounter = StoreManager.Instance.GetShortestQueueCounter();
+            targetCounter.LiningCustomers.Add(this);
+            yield return StartCoroutine(UpdateQueue());
+            yield return targetCounter.PlaceProducts(this);
+            yield return new WaitUntil(() => targetCounter.CurrentState == CheckoutCounter.State.Standby);
+        }
+
+        public void OnCheckoutComplete()
+        {
+            // This method is called by the counter after payment is complete.
+            // We can trigger any post-checkout behavior here, such as showing a thank you message.
+            overheadUI.ShowStatus("Thank you!");
+            queueNumber = int.MaxValue; // Reset queue number to indicate we're no longer in line
+        }
+
+        private IEnumerator Leave()
+        {
+            if (targetCounter != null)
+                targetCounter.LiningCustomers.Remove(this);
+            
+            OnLeave?.Invoke();
+            var exitPoint = StoreManager.Instance.GetExitPoint();
+            agent.SetDestination(exitPoint.position);
+            yield return new WaitForEndOfFrame(); // Ensure position is updated before checking
+            Destroy(gameObject);
+        }
+
+#endregion
+
 
         private bool HasArrived()
         {
-            bool arrived = !agent.pathPending
-                && agent.remainingDistance <= ARRIVED_THRESHOLD
-                && (!agent.hasPath || agent.velocity.sqrMagnitude < 0.01f);
-            return arrived;
-        }
+            if (!agent.pathPending)
+            {
+                if (agent.remainingDistance <= agent.stoppingDistance)
+                {
+                    if (!agent.hasPath || agent.velocity.sqrMagnitude == 0f)
+                    {
+                        animator.SetBool("IsMoving", false);
+                        return true;
+                    }
+                }
+            }
 
-        private bool HasExitedStore()
-        {
-            if (StoreManager.Instance == null) return true;
-            return !StoreManager.Instance.IsWithinStore(transform.position) && HasArrived();
-        }
-
-        private IEnumerator FaceTarget(Transform target)
-        {
-            if (target == null) yield break;
-            Vector3 dir = (target.position - transform.position).normalized;
-            dir.y = 0f;
-            if (dir == Vector3.zero) yield break;
-            yield return transform.DORotateQuaternion(Quaternion.LookRotation(dir), 0.4f)
-                .SetEase(Ease.OutQuad)
-                .WaitForCompletion();
-        }
-
-        private IEnumerator FaceDirection(Vector3 dir)
-        {
-            dir.y = 0f;
-            if (dir == Vector3.zero) yield break;
-            yield return transform.DORotateQuaternion(Quaternion.LookRotation(dir), 0.4f)
-                .SetEase(Ease.OutQuad)
-                .WaitForCompletion();
+            animator.SetBool("IsMoving", true);
+            return false;
         }
         private void LogEntry(string message)
         {
             if (!debugEntryLogs) return;
             Debug.Log($"[Customer:{name}] {message}");
         }
+
         private void UpdateAnimator()
         {
             if (animator == null) return;

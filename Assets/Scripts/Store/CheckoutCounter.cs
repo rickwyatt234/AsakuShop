@@ -14,28 +14,30 @@ namespace AsakuShop.Store
     // All money values are int yen. No fractions, no decimals, no dollars.
     public class CheckoutCounter : MonoBehaviour, IInteractable
     {
-        // ── Inspector ─────────────────────────────────────────────────────────
-    [Header("Queue")]
-        [Tooltip("The point where customers line up for checkout. Relative to counter transform.")]
-            [SerializeField] private Vector3 checkoutPoint;
+        [Header("Queue")]
+            [Tooltip("The point where customers line up for checkout. Relative to counter transform.")]
+                [SerializeField] private Vector3 checkoutPoint;
 
-        [Tooltip("Direction that customers line up in. Should be parallel to the counter front.")]
-            [SerializeField] private Vector3 liningDirection = Vector3.left;
+            [Tooltip("Direction that customers line up in. Should be parallel to the counter front.")]
+                [SerializeField] private Vector3 liningDirection = Vector3.left;
 
-    [Header("Belt & Packing")]
+        [Header("Belt & Packing")]
         
-        [Tooltip("Bounds within which products are placed on the belt. Relative to counter transform.")]
-            [SerializeField] private Bounds  placementBounds;
+            [Tooltip("Bounds within which products are placed on the belt. Relative to counter transform.")]
+                [SerializeField] private Bounds  placementBounds;
 
-        [Tooltip("Number of attempts to find a non-overlapping position for belt items. Placement fails after this many attempts, and the item is spawned anyway.")]
-            [SerializeField] private int     maxPlacementAttempts = 100;
+            [Tooltip("The position where change is given to the customer.")]
+                [SerializeField] private Vector3 moneyPoint;
 
-        [Tooltip("Point where items move to when scanned, before being destroyed. Relative to counter transform.")]
-            [SerializeField] private Vector3 packingPoint;
+            [Tooltip("Number of attempts to find a non-overlapping position for belt items. Placement fails after this many attempts, and the item is spawned anyway.")]
+                [SerializeField] private int     maxPlacementAttempts = 100;
 
-    [Header("Player Snap")]
-        [Tooltip("Point where the player stands when operating the counter. Used for queue positioning and camera look direction.")]
-            [SerializeField] private Transform cashierStandPoint;
+            [Tooltip("Point where items move to when scanned, before being destroyed. Relative to counter transform.")]
+                [SerializeField] private Vector3 packingPoint;
+
+        [Header("Player Snap")]
+            [Tooltip("Point where the player stands when operating the counter. Used for queue positioning and camera look direction.")]
+                [SerializeField] private Transform cashierStandPoint;
 
         [Header("Monitor")]
             [Tooltip("Text mesh pro component used to display information on the checkout monitor.")]
@@ -46,60 +48,62 @@ namespace AsakuShop.Store
                 [SerializeField] private Transform           scanZoneTransform;
                 [SerializeField] private Transform           bagZoneTransform;
 
-        private Vector3 savedPlayerPosition;
-        private Quaternion savedPlayerRotation;
+        [Header("Player Snapping")]
+                private Vector3 savedPlayerPosition;
+                private Quaternion savedPlayerRotation;
 
-        // ── State ─────────────────────────────────────────────────────────────
+
+        //Queue management
+                public int GetQueueNumber(ICheckoutCustomer customer) => LiningCustomers.IndexOf(customer);
+                public List<ICheckoutCustomer> LiningCustomers { get; private set; } = new List<ICheckoutCustomer>();
+
+        
+        //Checkout state management
         public enum State { Standby, Placing, Scanning, CashPay, CardPay }
         public State CurrentState { get; private set; }
 
-        // ── Queue ─────────────────────────────────────────────────────────────
-        public List<ICheckoutCustomer> LiningCustomers { get; private set; } = new List<ICheckoutCustomer>();
-        public int GetQueueNumber(ICheckoutCustomer customer) => LiningCustomers.IndexOf(customer);
 
-        // ── Belt items ───────────────────────────────────────────────────────
+        //Belt Items
         private List<CheckoutItem> beltItems = new List<CheckoutItem>();
 
-        // ── Transaction state ─────────────────────────────────────────────────
+
+        //Transactions
         private int      totalPrice;      // yen
         private int      customerPayment; // yen
         private ICheckoutCustomer currentCustomer;
 
-        // ── Checkout mode: is the player at the counter? ─────────────────────
+
+        //Checkout mode: is the player at the counter?
         private bool playerAtCounter;
 
-        // Set to true by ConfirmPayment() when the player confirms via input action or UI.
+
+        // Set to true by ConfirmPayment() when the player finishes the transaction (giving change,  confirming card payment, etc.)
         private bool confirmPayment;
 
-        // ── Yen denomination list (for CashPay reference) ────────────────────
+
+        //Yen denomination list (for CashPay reference)
         private static readonly int[] YenDenominations = { 10000, 5000, 1000, 500, 100, 50, 10, 5, 1 };
 
-        // ── Lifecycle ─────────────────────────────────────────────────────────
+#region Unity Lifecycle
         private void Awake()
         {
             UpdateMonitorText();
-
-            if (checkoutDragHandler != null)
-            {
-                if (scanZoneTransform == null)
-                    Debug.LogWarning("[CheckoutCounter] scanZoneTransform is not assigned. Items will scan immediately without snap animation.", this);
-                if (bagZoneTransform == null)
-                    Debug.LogWarning("[CheckoutCounter] bagZoneTransform is not assigned. Items will not snap to a bag zone after scanning.", this);
-            }
         }
 
         private void Start()
         {
             StoreManager.Instance?.RegisterCounter(this);
         }
+
         private void Update()
         {
-            // Exit checkout mode if Cancel is pressed while at counter
             if (playerAtCounter && PlayerService.InputManager?.cancel == true)
             {
                 ExitCheckoutMode();
             }
         }
+#endregion
+
 
 #region IInteractable Implementation
 
@@ -121,7 +125,7 @@ namespace AsakuShop.Store
 #endregion
 
 
-
+#region Player Checkout Mode
         private void EnterCheckoutMode()
         {
             playerAtCounter = true;
@@ -170,25 +174,10 @@ namespace AsakuShop.Store
 
             Debug.Log("[CheckoutCounter] Player exited checkout mode.");
         }
+#endregion
 
-        // ── Queue positioning ─────────────────────────────────────────────────
 
-        public Vector3 GetQueuePosition(ICheckoutCustomer customer, out Vector3 lookDirection)
-        {
-            Vector3 worldCheckoutPoint = transform.TransformPoint(checkoutPoint);
-            int queueNumber            = GetQueueNumber(customer);
-
-            lookDirection = queueNumber > 0
-                ? -liningDirection
-                : (cashierStandPoint != null
-                    ? (cashierStandPoint.position - worldCheckoutPoint).normalized
-                    : Vector3.forward);
-
-            return worldCheckoutPoint + liningDirection * queueNumber * 0.5f;
-        }
-
-        // ── Place products on belt ────────────────────────────────────────────
-
+#region Product Placement and Queue Management
         // Places the customer's inventory items onto the checkout belt with DOTween jump animations.
         public IEnumerator PlaceProducts(ICheckoutCustomer customer)
         {
@@ -238,15 +227,31 @@ namespace AsakuShop.Store
 
                 var checkoutItem = model.AddComponent<CheckoutItem>();
                 checkoutItem.Initialize(item, () => HandleScanning(checkoutItem),
-                                        scanZoneTransform, bagZoneTransform);
+                                        null, scanZoneTransform, bagZoneTransform);
                 beltItems.Add(checkoutItem);
             }
 
             SetState(State.Scanning);
         }
 
-        // ── Scanning ──────────────────────────────────────────────────────────
 
+        public Vector3 GetQueuePosition(ICheckoutCustomer customer, out Vector3 lookDirection)
+        {
+            Vector3 worldCheckoutPoint = transform.TransformPoint(checkoutPoint);
+            int queueNumber            = GetQueueNumber(customer);
+
+            lookDirection = queueNumber > 0
+                ? -liningDirection
+                : (cashierStandPoint != null
+                    ? (cashierStandPoint.position - worldCheckoutPoint).normalized
+                    : Vector3.forward);
+
+            return worldCheckoutPoint + liningDirection * queueNumber * 0.5f;
+        }
+#endregion
+
+
+#region Player Scanning and Payment Processing
         private void HandleScanning(CheckoutItem item)
         {
             if (!beltItems.Contains(item)) return;
@@ -261,9 +266,7 @@ namespace AsakuShop.Store
             if (beltItems.Count == 0)
                 StartCoroutine(ProcessPayment());
         }
-
-        // ── Payment ───────────────────────────────────────────────────────────
-
+        
         private IEnumerator ProcessPayment()
         {
             bool useCash = Random.value < 0.6f;
@@ -299,6 +302,12 @@ namespace AsakuShop.Store
 
             SetState(State.Standby);
         }
+#endregion
+
+
+
+
+
 
         // Called externally (e.g. from an input action handler or UI button) to confirm
         // the current payment and advance the checkout flow.

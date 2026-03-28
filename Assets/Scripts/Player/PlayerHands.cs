@@ -234,6 +234,7 @@ namespace AsakuShop.Player
                 heldItemVisualTransform.DOLocalRotate(shelf.HeldRotation.eulerAngles, PICKUP_ANIM_DURATION)
                     .SetEase(Ease.OutCubic);
                 //Debug.Log($"Picked up: {shelf.DisplayName}");
+                shelfComponent.IsMoving = true;
             }
             else if (container != null)
             {
@@ -432,6 +433,10 @@ namespace AsakuShop.Player
                     else
                         Debug.Log($"[PlayerHands] {sc.name} mounted outside store bounds — not registered.");
                 }
+                
+                ShelfComponent shelfComponent = heldItemVisualTransform?.GetComponent<ShelfComponent>();
+                if (shelfComponent != null)
+                    shelfComponent.IsMoving = false;
             }
 
             if (placementPreviewVisual != null)

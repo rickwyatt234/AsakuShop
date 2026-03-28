@@ -13,5 +13,6 @@ namespace AsakuShop.Store
 
         //Called by the counter after payment is complete.
         void OnCheckoutComplete();
+        public event System.Action OnLeave;
     }
 }

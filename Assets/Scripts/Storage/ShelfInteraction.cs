@@ -128,6 +128,7 @@ namespace AsakuShop.Storage
             return true;
         }
 
+
         public List<ItemInstance> GetAllItems() => new List<ItemInstance>(shelfComponent.Items);
         public int GetCapacity() => shelfComponent.slotColumns * shelfComponent.slotRows;
         public int GetCurrentCount() => shelfComponent.Items.Count;

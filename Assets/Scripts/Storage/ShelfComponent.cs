@@ -5,8 +5,10 @@ using AsakuShop.Core;
 
 namespace AsakuShop.Storage
 {
-    public class ShelfComponent : MonoBehaviour, IInteractable, IShelfHoldable, IShelfFrontPoint, IShelfItemProvider
+    public class ShelfComponent : MonoBehaviour, IInteractable, IShelfHoldable, IShelfItemProvider
     {
+        public Vector3 Front => transform.TransformPoint(Vector3.forward);
+
         [SerializeField] private string shelfID = "Shelf001";
         public string DisplayName = "Shelf";
 
@@ -29,7 +31,6 @@ namespace AsakuShop.Storage
         public Vector3 GetStockingOffset() => stockingOffset;
 
         public float mountOffsetDistance = 0.5f;
-        public float browsingDistance = 2f;
 
         [SerializeField, Tooltip("Optional override: explicit world-space point a customer walks to before browsing this shelf. " +
                                         "If null, the point is auto-calculated as 'browsingDistance' in front of the shelf.")]
@@ -57,6 +58,12 @@ namespace AsakuShop.Storage
         private ShelfInteraction shelfInteraction;
         private bool IsMounted => IsShelfWallMounted(this);
 
+        public virtual void Open(bool forced, bool playSFX) { }
+
+        public virtual void Close(bool forced, bool playSFX) { }
+
+        public  bool IsOpen { get; set; } = false;
+        public bool IsMoving { get; set; } = false;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #region Unity Lifecycle
@@ -126,21 +133,38 @@ namespace AsakuShop.Storage
         public bool TryRemoveItem(ItemInstance item) => shelfInteraction != null && shelfInteraction.TryRemoveItem(item);
         public Vector3 GetSlotPosition(ItemInstance item) => shelfInteraction != null ? shelfInteraction.GetSlotPosition(item) : Vector3.zero;
 
-        // IShelfFrontPoint — delegates to GetCustomerApproachPoint so Customer AI
-        // knows where to navigate before browsing this shelf.
-        public Vector3 FrontPoint => GetCustomerApproachPoint();
 
         // IShelfItemProvider — lets Customer AI peek at and take the first item
         // without importing AsakuShop.Storage.
         public ItemInstance PeekItem() => items.Count > 0 ? items[0] : null;
 
-        public ItemInstance TakeItem()
+        public ShelfTakeResult TakeItem()
         {
-            if (items.Count == 0) return null;
+            if (items.Count == 0) return default;
+
             ItemInstance item = items[0];
+            ItemPickup pickup = FindPickupForItem(item);
+
+            // Remove from shelf data regardless of visual lookup result.
             TryRemoveItem(item);
-            return item;
+
+            return new ShelfTakeResult(item, pickup);
         }
+
+        private ItemPickup FindPickupForItem(ItemInstance item)
+        {
+            if (item == null) return null;
+
+            ItemPickup[] pickups = GetComponentsInChildren<ItemPickup>(true);
+            foreach (ItemPickup p in pickups)
+            {
+                if (p != null && ReferenceEquals(p.ItemInstance, item))
+                return p;
+            }
+
+            return null;
+        }
+        
 
         // Unparents every child GameObject that has an ItemPickup component and
         // enables physics on it (kinematic = false, useGravity = true, colliders re-enabled)
@@ -164,19 +188,6 @@ namespace AsakuShop.Storage
             }
         }
 
-        // Returns the world-space position a customer's NavMeshAgent should navigate to
-        // before picking an item from this shelf.
-        // Uses the explicit customerApproachPoint override if assigned;
-        // otherwise projects browsingDistance units in front of the shelf's
-        // forward direction from the shelf's centre.
-        public Vector3 GetCustomerApproachPoint()
-        {
-            if (customerApproachPoint != null)
-                return customerApproachPoint.position;
-        
-            // Default: stand in front of the shelf face
-            return transform.position + transform.forward * browsingDistance;
-        }
 
         // Called by PlayerHands after a successful wall-mount placement.
         // Actual StoreManager registration is handled by PlayerHands (which references

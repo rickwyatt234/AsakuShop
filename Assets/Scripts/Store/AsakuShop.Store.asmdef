@@ -7,6 +7,7 @@
         "AsakuShop.Economy",
         "AsakuShop.Storage",
         "Unity.TextMeshPro",
+        "Unity.AI.Navigation",
         "Unity.Cinemachine",
         "DOTween.Modules",
         "Unity.InputSystem"

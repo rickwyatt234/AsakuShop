@@ -56,7 +56,7 @@ namespace AsakuShop.Items
         // falls back to double the BasePrice, rounded to the nearest whole yen.
         public int EffectiveMarketPrice => MarketPrice > 0
             ? MarketPrice
-            : Mathf.RoundToInt(BasePrice) * 2;
+            : Mathf.RoundToInt(BasePrice * 1.2f);
 
         private void OnValidate()
         {
