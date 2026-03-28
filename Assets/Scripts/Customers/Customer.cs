@@ -247,14 +247,26 @@ namespace AsakuShop.Customers
                             Destroy(taken.Pickup.gameObject);
 
                         yield return new WaitForSeconds(0.5f);
+                        break; // Done after taking one item; Shopping() decides whether to browse again
                     }
                     else
                     {
                         overheadUI.ShowDialog(overpricedDialogue.GetRandomLine());
                         yield return new WaitForSeconds(1f);
+                        break; // Done after rejecting the top item; move on to the next shelf visit
                     }
                 }
+                else
+                {
+                    // Shelf is empty — yield one frame to avoid a tight spin, then exit
+                    yield return null;
+                    break;
+                }
             }
+
+            // Return the shelf to the browsing pool so other customers can visit it
+            if (targetShelf != null)
+                StoreManager.Instance.RegisterShelf(targetShelf);
         }
 #endregion
 
