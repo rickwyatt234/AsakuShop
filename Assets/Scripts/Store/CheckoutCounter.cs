@@ -351,9 +351,9 @@ namespace AsakuShop.Store
             cashRegister.OnPaymentComplete -= HandlePaymentComplete;
             cashRegister.OnPaymentComplete += HandlePaymentComplete;
 
-            int changeOwed = customerPayment - totalPrice;
-            cashRegister.Open(changeOwed);
-            Debug.Log($"[CheckoutCounter] Cash payment started. Change owed: ¥{changeOwed:N0}.");
+            cashRegister.Open(totalPrice, customerPayment);
+            Debug.Log($"[CheckoutCounter] Cash payment started. " +
+                $"Total: ¥{totalPrice:N0}, Customer tenders: ¥{customerPayment:N0}.");
         }
 
         // Shared callback fired by either the PaymentTerminal or the CashRegister on completion.

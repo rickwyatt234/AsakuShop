@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using DG.Tweening;
 using TMPro;
 using Unity.Cinemachine;
@@ -9,137 +8,183 @@ namespace AsakuShop.Store
 {
     // Manages the cash payment flow:
     //   1. Camera zooms in on the cash register.
-    //   2. Player clicks denomination drawers (CashDrawerButton) to build up change.
-    //   3. When given change equals owed change (or no change is owed), the Confirm button activates.
-    //   4. Player presses Confirm → camera zooms out → OnPaymentComplete fires.
+    //   2. Player reads the total and customer's tendered amount from the display,
+    //      then types the tendered amount on the world-space numpad buttons (via Append()).
+    //   3. Player presses Confirm → the cash drawer opens → OnPaymentComplete fires.
+    //
+    // World-space numpad buttons: wire each digit Button.onClick to call Append("0")–Append("9").
+    // Wire the backspace Button.onClick to call Append("back").
+    // Wire the Clear button to ClearEntry() and the Confirm button to the confirmButton field.
     //
     // All amounts are whole yen (int). No fractions, no decimals.
     public class CashRegister : MonoBehaviour
     {
         [Header("Camera")]
-        [SerializeField, Tooltip("Cinemachine virtual camera that zooms in on the cash register.")]
+        [SerializeField, Tooltip("Cinemachine virtual camera that zooms in on the cash register. " +
+            "Its GameObject must stay ENABLED — priority controls when it dominates.")]
         private CinemachineCamera zoomCamera;
         [SerializeField] private int zoomedPriority  = 20;
         [SerializeField] private int defaultPriority = 0;
 
-        [Header("UI")]
+        [Header("UI — Labels")]
+        [SerializeField, Tooltip("Shows the transaction total (e.g. 'Total: ¥1,200').")]
+        private TMP_Text totalText;
+        [SerializeField, Tooltip("Shows how much the customer is tendering (e.g. 'Customer gives: ¥2,000').")]
+        private TMP_Text changeOwedText;
+        [SerializeField, Tooltip("Shows the change to return (e.g. 'Change: ¥800').")]
+        private TMP_Text changeGivenText;
+        [SerializeField, Tooltip("Live display of the amount being keyed in by the player.")]
+        private TMP_Text displayText;
+
+        [Header("UI — Buttons")]
+        [SerializeField, Tooltip("Removes the last keyed digit (backspace). Wire onClick → Append(\"back\").")]
+        private Button undoButton;
+        [SerializeField, Tooltip("Clears the entire keyed entry. Wire onClick → ClearEntry().")]
+        private Button clearButton;
+        [SerializeField, Tooltip("Confirms the payment and opens the cash drawer.")]
+        private Button confirmButton;
+
+        [Header("Panel")]
         [SerializeField] private GameObject registerPanel;
-        [SerializeField] private TMP_Text   changeOwedText;
-        [SerializeField] private TMP_Text   changeGivenText;
-        [SerializeField] private Button     undoButton;
-        [SerializeField] private Button     clearButton;
-        [SerializeField] private Button     confirmButton;
+
+        [Header("Drawer")]
+        [SerializeField, Tooltip("CashDrawer component on the physical drawer GameObject.")]
+        private CashDrawer cashDrawer;
 
         [Header("Timing")]
-        [Tooltip("Seconds to wait after the camera cut before enabling drawer input.")]
+        [Tooltip("Seconds to wait after the camera cut before enabling numpad input.")]
         [SerializeField] private float zoomSettleTime = 0.6f;
 
-        // Fired when the player presses Confirm with the correct change (or no change owed).
+        // Fired when the player presses Confirm.
         public event System.Action OnPaymentComplete;
 
-        private int               changeOwed;
-        private int               changeGiven;
-        private bool              allowDrawing;
-        private readonly Stack<int> drawHistory = new Stack<int>();
+        private string enteredAmount  = string.Empty;
+        private int    totalPrice;
+        private int    customerTenders;
+        private int    changeOwed;
+        private bool   inputEnabled;
 
         private void Awake()
         {
             registerPanel?.SetActive(false);
 
-            undoButton?.onClick.AddListener(HandleUndo);
-            clearButton?.onClick.AddListener(HandleClear);
+            undoButton?.onClick.AddListener(() => Append("back"));
+            clearButton?.onClick.AddListener(ClearEntry);
             confirmButton?.onClick.AddListener(HandleConfirm);
 
-            if (zoomCamera != null) zoomCamera.Priority = defaultPriority;
+            if (zoomCamera != null)
+            {
+                zoomCamera.Priority = defaultPriority;
+
+                if (!zoomCamera.gameObject.activeInHierarchy)
+                    Debug.LogWarning($"[CashRegister] zoomCamera '{zoomCamera.name}' is inactive. " +
+                        "Enable its GameObject and let Cinemachine priority control when it takes over.");
+            }
         }
 
-        // Opens the register, zooms the camera in, and sets up the change to count out.
-        // changeOwedAmount is (customerPayment – totalPrice). Pass 0 if no change is due.
+        // Opens the register, zooms the camera in, and displays the transaction amounts.
+        // totalAmount   – the transaction total the customer owes.
+        // tenders       – the cash amount the customer is handing over.
         // Called by CheckoutCounter.BeginCashPayment().
-        public void Open(int changeOwedAmount)
+        public void Open(int totalAmount, int tenders)
         {
-            changeOwed   = Mathf.Max(0, changeOwedAmount);
-            changeGiven  = 0;
-            allowDrawing = false;
-            drawHistory.Clear();
+            totalPrice      = totalAmount;
+            customerTenders = tenders;
+            changeOwed      = Mathf.Max(0, tenders - totalAmount);
+            enteredAmount   = string.Empty;
+            inputEnabled    = false;
 
             registerPanel?.SetActive(true);
-            UpdateDisplay();
+            RefreshDisplay();
             RefreshConfirmButton();
 
             if (zoomCamera != null) zoomCamera.Priority = zoomedPriority;
 
-            // If no change is owed the confirm button is already active; still wait for the
-            // camera blend to finish so the player knows what they're looking at.
-            DOVirtual.DelayedCall(zoomSettleTime, () => allowDrawing = true);
+            DOVirtual.DelayedCall(zoomSettleTime, () =>
+            {
+                inputEnabled = true;
+                RefreshConfirmButton();
+            });
         }
 
         // Hides the panel and zooms the camera back out.
         // Called internally after Confirm, and by CheckoutCounter on early exit.
         public void Close()
         {
-            allowDrawing = false;
+            inputEnabled = false;
             registerPanel?.SetActive(false);
 
             if (zoomCamera != null) zoomCamera.Priority = defaultPriority;
         }
 
-        // Called by CashDrawerButton when the player interacts with a denomination drawer.
-        public void Draw(int amount)
+        // Appends a digit, or "back" to delete the last character.
+        // Wire each numpad button's onClick to call this method with the button's digit string.
+        // Wire the backspace button to call Append("back").
+        public void Append(string input)
         {
-            if (!allowDrawing || amount <= 0) return;
+            if (!inputEnabled) return;
 
-            changeGiven += amount;
-            drawHistory.Push(amount);
+            if (input == "back")
+            {
+                if (enteredAmount.Length > 0)
+                    enteredAmount = enteredAmount.Substring(0, enteredAmount.Length - 1);
+            }
+            else if (input.Length > 0 && char.IsDigit(input[0]))
+            {
+                enteredAmount += input;
+            }
 
-            UpdateDisplay();
+            RefreshDisplay();
             RefreshConfirmButton();
         }
 
-        private void HandleUndo()
+        // Clears the entire keyed entry.
+        // Wire the Clear button's onClick to this method.
+        public void ClearEntry()
         {
-            if (!allowDrawing || drawHistory.Count == 0) return;
+            if (!inputEnabled) return;
 
-            changeGiven -= drawHistory.Pop();
-            changeGiven  = Mathf.Max(0, changeGiven);
-
-            UpdateDisplay();
-            RefreshConfirmButton();
-        }
-
-        private void HandleClear()
-        {
-            if (!allowDrawing) return;
-
-            changeGiven = 0;
-            drawHistory.Clear();
-
-            UpdateDisplay();
+            enteredAmount = string.Empty;
+            RefreshDisplay();
             RefreshConfirmButton();
         }
 
         private void HandleConfirm()
         {
-            if (!allowDrawing) return;
+            if (!inputEnabled) return;
 
-            // Guard: if change is owed, the given amount must exactly match.
-            if (changeOwed > 0 && changeGiven != changeOwed) return;
+            if (!int.TryParse(enteredAmount, out int entered))
+            {
+                Debug.LogWarning("[CashRegister] Could not parse entered amount.");
+                return;
+            }
 
+            // TODO: Implement consequences when entered != customerTenders.
+            // For now, any confirmed entry opens the drawer and completes the payment.
+
+            cashDrawer?.Open();
             Close();
             OnPaymentComplete?.Invoke();
         }
 
-        private void UpdateDisplay()
+        private void RefreshDisplay()
         {
-            if (changeOwedText  != null) changeOwedText.text  = $"Change Owed: ¥{changeOwed:N0}";
-            if (changeGivenText != null) changeGivenText.text = $"Given: ¥{changeGiven:N0}";
+            if (totalText       != null) totalText.text       = $"Total: ¥{totalPrice:N0}";
+            if (changeOwedText  != null) changeOwedText.text  = $"Customer gives: ¥{customerTenders:N0}";
+            if (changeGivenText != null) changeGivenText.text = $"Change: ¥{changeOwed:N0}";
+            if (displayText     != null)
+                displayText.text = int.TryParse(enteredAmount, out int parsed)
+                    ? $"¥{parsed:N0}"
+                    : "¥0";
         }
 
         private void RefreshConfirmButton()
         {
             if (confirmButton == null) return;
-            // Active when no change is needed, or when the player has counted out the exact amount.
-            confirmButton.interactable = (changeOwed == 0 || changeGiven == changeOwed);
+            // Enabled once the camera has settled and the player has keyed in something
+            // (or no change is owed so the transaction is trivially confirmed).
+            confirmButton.interactable = inputEnabled &&
+                (changeOwed == 0 || !string.IsNullOrEmpty(enteredAmount));
         }
     }
 }

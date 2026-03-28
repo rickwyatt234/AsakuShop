@@ -50,7 +50,17 @@ namespace AsakuShop.Store
             confirmEntryButton?.onClick.AddListener(HandleEntryConfirm);
             finalConfirmButton?.onClick.AddListener(HandleFinalConfirm);
 
-            if (zoomCamera != null) zoomCamera.Priority = defaultPriority;
+            if (zoomCamera != null)
+            {
+                zoomCamera.Priority = defaultPriority;
+
+                // The camera GameObject must be ENABLED at all times.
+                // Cinemachine's priority system selects the dominant camera — do NOT deactivate it.
+                // Set the GameObject active and leave priority management to Open() / Close().
+                if (!zoomCamera.gameObject.activeInHierarchy)
+                    Debug.LogWarning($"[PaymentTerminal] zoomCamera '{zoomCamera.name}' is inactive. " +
+                        "Enable its GameObject and let Cinemachine priority control when it takes over.");
+            }
         }
 
         // Opens the terminal, zooms the camera in, and prepares the keypad for the given amount.
@@ -112,15 +122,9 @@ namespace AsakuShop.Store
                 return;
             }
 
-            if (amount != requiredAmount)
-            {
-                // Wrong amount — show mismatch briefly, then restore the keypad display.
-                displayText.text = $"¥{amount:N0}  ≠  ¥{requiredAmount:N0}";
-                DOVirtual.DelayedCall(1.2f, RefreshDisplay);
-                return;
-            }
+            // TODO: Implement consequences for incorrect amount (amount != requiredAmount).
+            // For now, any confirmed entry advances to the success screen.
 
-            // Correct amount — transition to the success screen.
             inputEnabled = false;
             entryPanel?.SetActive(false);
             successPanel?.SetActive(true);
