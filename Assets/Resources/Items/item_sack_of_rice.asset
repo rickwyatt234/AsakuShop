@@ -16,15 +16,14 @@ MonoBehaviour:
   DisplayName: Sack of Rice
   Description: A 1kg sack of rice. A pivotal ingredient for many recipes.
   Category: 0
-  StorageType: 0
+  PreferredStorageType: 0
   StockingSize: 0
   WeightKg: 1
   BaseGrade: 0
-  BaseBuyPrice: 800
-  BaseSellPrice: 850
+  BasePrice: 800
+  MarketPrice: 0
   DemandFactors: 0
   IsCrateItem: 1
   IsCraftingOutput: 0
   IsCraftingIngredient: 1
   WorldPrefab: {fileID: 3115926099274169023, guid: 2fb193a30a78f1841ad3bd4412a5cadc, type: 3}
-  Icon: {fileID: 0}

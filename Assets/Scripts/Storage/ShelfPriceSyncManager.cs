@@ -1,5 +1,6 @@
 using UnityEngine;
 using AsakuShop.Items;
+using AsakuShop.Core;
 
 namespace AsakuShop.Storage
 {
@@ -13,6 +14,18 @@ namespace AsakuShop.Storage
     {
         public static ShelfPriceSyncManager Instance { get; private set; }
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void RegisterBootstrapper()
+        {
+            GameBootstrapper.RegisterBootstrapper(() =>
+            {
+                if (Instance != null) return;
+                GameObject go = new GameObject("[ShelfPriceSyncManager]");
+                go.AddComponent<ShelfPriceSyncManager>();
+                // DontDestroyOnLoad is called inside ShelfPriceSyncManager.Awake().
+            });
+        }
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -21,6 +34,7 @@ namespace AsakuShop.Storage
                 return;
             }
             Instance = this;
+            DontDestroyOnLoad(gameObject);
         }
 
         private void OnEnable()

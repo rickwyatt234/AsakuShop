@@ -109,6 +109,11 @@ namespace AsakuShop.Items
             return $"[{name} | Grade: {grade} | Price: ¥{CurrentPrice}]";
         }
 
+        public string GradeToString()
+        {
+            return CurrentGrade.ToDisplayString();
+        }
+
         
     }
 }

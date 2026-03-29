@@ -44,7 +44,7 @@ namespace AsakuShop.UI
                 UpdateLabelPosition();
             }
             // Only do world item raycast when inventory is CLOSED
-            if (!InventoryState.IsOpen)
+            if (!InventoryState.IsOpen && GameStateController.Instance.CurrentPhase == GamePhase.Playing)
             {
                 CheckItemHover();
             }

@@ -16,15 +16,14 @@ MonoBehaviour:
   DisplayName: Single Cup Noodle
   Description: 'A single serving of ramen in a styrofoam cup. Just add water! '
   Category: 0
-  StorageType: 0
+  PreferredStorageType: 0
   StockingSize: 0
   WeightKg: 0.1
   BaseGrade: 0
-  BaseBuyPrice: 100
-  BaseSellPrice: 150
+  BasePrice: 100
+  MarketPrice: 0
   DemandFactors: 0
   IsCrateItem: 1
   IsCraftingOutput: 0
   IsCraftingIngredient: 0
   WorldPrefab: {fileID: 7385360444939377690, guid: b4860accea0e78f44b8c767807c3b51e, type: 3}
-  Icon: {fileID: 0}

@@ -113,7 +113,7 @@ MonoBehaviour:
   heldOffset: {x: 0, y: 0.5, z: 0}
   heldRotation: {x: 0, y: 0, z: 0, w: 1}
   rotationOffset: {x: 0, y: 0, z: 0}
-  mountOffsetDistance: 0.5
+  mountOffsetDistance: 0
   mountMode: 1
   allowedSurfaces: 1
   alignToSurfaceNormal: 0

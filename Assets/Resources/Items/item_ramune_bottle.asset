@@ -17,15 +17,14 @@ MonoBehaviour:
   Description: A fun fizzy drink. Push the marble into the bottle with the provided
     plastic tool. Comes in many flavors!
   Category: 0
-  StorageType: 0
+  PreferredStorageType: 0
   StockingSize: 0
   WeightKg: 0.2
   BaseGrade: 0
-  BaseBuyPrice: 450
-  BaseSellPrice: 500
+  BasePrice: 150
+  MarketPrice: 0
   DemandFactors: 0
   IsCrateItem: 1
   IsCraftingOutput: 0
   IsCraftingIngredient: 0
   WorldPrefab: {fileID: 3954722158838055419, guid: f6462649bc3dd684da2c85c22f9b07c2, type: 3}
-  Icon: {fileID: 0}
