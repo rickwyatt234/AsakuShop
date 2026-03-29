@@ -25,8 +25,11 @@ namespace AsakuShop.UI
         [SerializeField] private TextMeshProUGUI itemInfoText;
         public float examinationItemScale = 1.5f;
 
+        [SerializeField] private float itemDisplayDistance = 1.5f;
+
         private ItemInstance currentExaminedItem;
         private GameObject examinedItemDisplay;
+        private Transform runtimeDisplayAnchor;
         private GamePhase phaseBeforeExamination;
         private bool previousExamineState = false;
         // Accumulated yaw (Y) and pitch (X) driven by mouse input; rebuilt into a fresh
@@ -61,6 +64,8 @@ namespace AsakuShop.UI
         private void OnDestroy()
         {
             CoreEvents.OnExamineRequested -= HandleExamineRequested;
+            if (runtimeDisplayAnchor != null)
+                Destroy(runtimeDisplayAnchor.gameObject);
         }
 
         private void HandleExamineRequested(object payload)
@@ -133,9 +138,28 @@ namespace AsakuShop.UI
             // Instantiate the item model
             if (currentExaminedItem?.Definition?.WorldPrefab != null)
             {
+                // Resolve the display parent; fall back to a camera-anchored runtime anchor
+                // when itemDisplayParent has not been assigned in the Inspector.
+                Transform displayParent = itemDisplayParent;
+                if (displayParent == null)
+                {
+                    Camera mainCam = Camera.main;
+                    if (mainCam != null)
+                    {
+                        if (runtimeDisplayAnchor == null)
+                        {
+                            runtimeDisplayAnchor = new GameObject("ExaminationDisplayAnchor").transform;
+                            runtimeDisplayAnchor.SetParent(mainCam.transform, false);
+                            runtimeDisplayAnchor.localPosition = new Vector3(0f, 0f, itemDisplayDistance);
+                            runtimeDisplayAnchor.localRotation = Quaternion.identity;
+                        }
+                        displayParent = runtimeDisplayAnchor;
+                    }
+                }
+
                 examinedItemDisplay = Instantiate(
                     currentExaminedItem.Definition.WorldPrefab,
-                    itemDisplayParent
+                    displayParent
                 );
                 examinedItemDisplay.transform.localPosition = Vector3.zero;
                 examinedItemDisplay.transform.localRotation = Quaternion.identity;
@@ -148,6 +172,10 @@ namespace AsakuShop.UI
                     rb.isKinematic = true;
                     rb.useGravity = false;
                 }
+
+                // Disable colliders so the display model does not interfere with raycasts
+                foreach (Collider col in examinedItemDisplay.GetComponentsInChildren<Collider>())
+                    col.enabled = false;
 
                 foreach (Renderer renderer in examinedItemDisplay.GetComponentsInChildren<Renderer>())
                 {
