@@ -161,17 +161,27 @@ namespace AsakuShop.Player
             }
             else if (mountable != null)
             {
-                // If wall-mounted, allow pickup on examine; otherwise require interact
-                bool isWallMounted = false;
+                // Determine whether the object is already mounted (placed on a surface).
+                // Wall-mounted: detected via the ShelfComponent raycast helper.
+                // Floor-mounted: detected via the ShelvingUnitComponent.IsMounted flag.
+                bool isMounted = false;
                 if (mountable.AllowedSurfaces.HasFlag(MountSurfaceMask.Wall) && mountable.AlignToSurfaceNormal)
                 {
                     var shelfComp = interactableObject.GetComponent<ShelfComponent>();
                     if (shelfComp != null)
-                        isWallMounted = shelfComp.IsShelfWallMounted(shelfComp);
+                        isMounted = shelfComp.IsShelfWallMounted(shelfComp);
                 }
-                if (isWallMounted)
+                else if (mountable.AllowedSurfaces.HasFlag(MountSurfaceMask.Ground))
                 {
-                    // Allow pickup on examine
+                    var shelvingUnit = interactableObject.GetComponent<ShelvingUnitComponent>();
+                    if (shelvingUnit != null)
+                        isMounted = shelvingUnit.IsMounted;
+                }
+
+                if (isMounted)
+                {
+                    // Mounted objects are retrieved via Examine, not Interact.
+                    if (!examinePressedThisFrame) return;
                 }
                 else if (!interactPressedThisFrame)
                 {
@@ -199,6 +209,15 @@ namespace AsakuShop.Player
                     var storageUnit = interactableObject.GetComponent<IStorageUnit>();
                     if (storageUnit != null)
                         storageUnit.ClearAllItems();
+                }
+
+                // If ShelvingUnitComponent, eject stocked items and clear all surfaces
+                var shelvingUnit = interactableObject.GetComponent<ShelvingUnitComponent>();
+                if (shelvingUnit != null)
+                {
+                    shelvingUnit.EjectAllStockedItems();
+                    foreach (var surface in shelvingUnit.GetSurfaces())
+                        surface.ClearAllItems();
                 }
 
                 heldMountable = mountable;
@@ -800,14 +819,37 @@ namespace AsakuShop.Player
 
             if (holdingMountable)
             {
-                Ray wallCheckRay = new Ray(playerCamera.position, playerCamera.forward);
-                if (heldMountable.AllowedSurfaces.HasFlag(MountSurfaceMask.Wall) &&
-                    Physics.Raycast(wallCheckRay, out RaycastHit hit, 5f) &&
-                    hit.collider.gameObject.layer == LayerMask.NameToLayer("Wall") &&
-                    heldMountable.AlignToSurfaceNormal)
+                Ray checkRay = new Ray(playerCamera.position, playerCamera.forward);
+                if (Physics.Raycast(checkRay, out RaycastHit hit, 5f))
                 {
-                    previewRotation = Vector3.zero;
-                    return;
+                    int layer = hit.collider.gameObject.layer;
+
+                    // Wall-mounted: zero rotation and hand full control to HandlePlacementPreview.
+                    if (heldMountable.AllowedSurfaces.HasFlag(MountSurfaceMask.Wall) &&
+                        layer == LayerMask.NameToLayer("Wall") &&
+                        heldMountable.AlignToSurfaceNormal)
+                    {
+                        previewRotation = Vector3.zero;
+                        return;
+                    }
+
+                    // Ground-mounted: HandlePlacementPreview already set the correct hit.point
+                    // position — only apply rotation here so the +0.5 f floor-snap below does
+                    // not push the unit up into the air.
+                    if (heldMountable.AllowedSurfaces.HasFlag(MountSurfaceMask.Ground) &&
+                        layer == LayerMask.NameToLayer("Ground"))
+                    {
+                        // Still allow manual yaw rotation input before we return.
+                        float scrollDelta = Mouse.current.scroll.ReadValue().y / 20f;
+                        if (scrollDelta != 0 && heldMountable.AllowManualYawRotation)
+                            previewRotation.y += scrollDelta * 90f;
+                        previewRotation.y += input.rotatePreviewHorizontal * 90f * Time.deltaTime;
+                        previewRotation.y %= 360f;
+
+                        if (placementPreviewVisual != null)
+                            placementPreviewVisual.transform.rotation = Quaternion.Euler(previewRotation);
+                        return;
+                    }
                 }
             }
 
