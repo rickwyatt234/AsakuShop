@@ -253,7 +253,8 @@ namespace AsakuShop.Player
                 Ray ray = new Ray(playerCamera.position, playerCamera.forward);
                 if (Physics.Raycast(ray, out RaycastHit hit, 3f))
                 {
-                    IShelfHoldable shelf = hit.collider.GetComponent<IShelfHoldable>();
+                    IShelfHoldable shelf = hit.collider.GetComponent<IShelfHoldable>()
+                        ?? hit.collider.GetComponentInParent<IShelfHoldable>();
                     if (shelf != null && heldItem != null)
                     {
                         TryStockItemOnShelf(shelf);
@@ -371,8 +372,8 @@ namespace AsakuShop.Player
 
                 if (heldMountable.GameObject.TryGetComponent(out Rigidbody rb))
                 {
-                    rb.isKinematic = placedOnWall;
-                    rb.useGravity = !placedOnWall;
+                    rb.isKinematic = placedOnWall || placedOnGround;
+                    rb.useGravity = false;
                 }
 
                 var shelfComponent = heldMountable.GameObject.GetComponent<ShelfComponent>();
@@ -422,20 +423,36 @@ namespace AsakuShop.Player
         private void TryStockItemOnShelf(IShelfHoldable shelf)
         {
             if (heldItem == null || shelf == null) return;
-            if (!IsShelfWallMounted(shelf))
+            if (!IsShelfMounted(shelf))
             {
-                Debug.Log("[STOCK] Cannot stock item on a non-wall-mounted shelf.");
+                Debug.Log("[STOCK] Cannot stock item on a shelf that is not mounted.");
                 return;
             }
 
             IStorageUnit storageUnit = shelf.GameObject.GetComponent<IStorageUnit>();
+            IShelfLayout shelfLayout = shelf.GameObject.GetComponent<IShelfLayout>();
+
+            if (storageUnit == null || shelfLayout == null)
+            {
+                // Fall back to children — multi-surface units (e.g. ShelvingUnitComponent) keep
+                // IStorageUnit / IShelfLayout on their ShelvingUnitSurface children, not the root.
+                foreach (var unit in shelf.GameObject.GetComponentsInChildren<IStorageUnit>())
+                {
+                    if (unit.CanAddItem(heldItem) && unit is IShelfLayout layout)
+                    {
+                        storageUnit = unit;
+                        shelfLayout = layout;
+                        break;
+                    }
+                }
+            }
+
             if (storageUnit == null)
             {
                 Debug.Log("[STOCK] Cannot stock item — no IStorageUnit found on shelf.");
                 return;
             }
 
-            IShelfLayout shelfLayout = shelf.GameObject.GetComponent<IShelfLayout>();
             if (shelfLayout == null)
             {
                 Debug.Log("[STOCK] Cannot stock item — no IShelfLayout found on shelf.");
@@ -459,7 +476,10 @@ namespace AsakuShop.Player
             Vector3 stockingRotationEuler = shelfLayout.GetStockingRotation();
 
             GameObject visual = heldItemVisual;
-            visual.transform.SetParent(shelf.GameObject.transform);
+            // Parent to the object that owns the slot layout so local positions are correct.
+            // For ShelfComponent this is the shelf root; for ShelvingUnitSurface it is the surface.
+            Transform stockParent = (storageUnit as MonoBehaviour)?.transform ?? shelf.GameObject.transform;
+            visual.transform.SetParent(stockParent);
 
             Collider[] colliders = visual.GetComponentsInChildren<Collider>();
             foreach (Collider col in colliders)
@@ -566,9 +586,8 @@ namespace AsakuShop.Player
                 heldItemVisualTransform.rotation = Quaternion.Euler(previewRotation);
 
                 List<Transform> itemsToUnparent = new();
-                foreach (Transform child in heldItemVisualTransform)
-                    if (child.GetComponent<ItemPickup>() != null)
-                        itemsToUnparent.Add(child);
+                foreach (ItemPickup pickup in heldItemVisualTransform.GetComponentsInChildren<ItemPickup>())
+                    itemsToUnparent.Add(pickup.transform);
                 foreach (Transform item in itemsToUnparent)
                 {
                     item.SetParent(null);
@@ -856,7 +875,7 @@ namespace AsakuShop.Player
             }
         }
 
-        private bool IsShelfWallMounted(IShelfHoldable shelf)
+        private bool IsShelfMounted(IShelfHoldable shelf)
         {
             if (shelf == null) return false;
             Rigidbody rb = shelf.GameObject.GetComponent<Rigidbody>();
@@ -871,12 +890,18 @@ namespace AsakuShop.Player
                 -shelf.GameObject.transform.up
             };
 
+            int wallLayer   = LayerMask.NameToLayer("Wall");
+            int groundLayer = LayerMask.NameToLayer("Ground");
+
             foreach (Vector3 direction in directions)
             {
                 Ray wallCheckRay = new Ray(shelf.GameObject.transform.position, direction);
-                if (Physics.Raycast(wallCheckRay, out RaycastHit hit, 2f) &&
-                    hit.collider.gameObject.layer == LayerMask.NameToLayer("Wall"))
-                    return true;
+                if (Physics.Raycast(wallCheckRay, out RaycastHit hit, 2f))
+                {
+                    int layer = hit.collider.gameObject.layer;
+                    if (layer == wallLayer || layer == groundLayer)
+                        return true;
+                }
             }
             return false;
         }
