@@ -120,6 +120,9 @@ namespace AsakuShop.Input
 
             private void Update()
             {
+                if (GameStateController.Instance == null)
+                    return;
+
                 var phase = GameStateController.Instance.CurrentPhase;
 
                 if (phase == GamePhase.Checkout)
