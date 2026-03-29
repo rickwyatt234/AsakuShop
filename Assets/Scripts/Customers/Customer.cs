@@ -34,7 +34,7 @@ namespace AsakuShop.Customers
         [SerializeField] private CustomerOverheadUI      overheadUI;
         private Animator animator;
         private NavMeshAgent agent;
-        private ShelfComponent targetShelf;
+        private ShelfContainer targetShelf;
         private CheckoutCounter targetCounter;
         private int queueNumber = int.MaxValue;
         private bool isPicking = false;
@@ -142,7 +142,7 @@ namespace AsakuShop.Customers
 
         private IEnumerator FindShelf()
         {
-            ShelfComponent shelf = StoreManager.Instance.GetRandomShelf();
+            ShelfContainer shelf = StoreManager.Instance.GetRandomShelf();
 
             if (targetShelf != null && targetShelf != shelf && targetShelf.IsOpen)
             {
@@ -154,10 +154,11 @@ namespace AsakuShop.Customers
 
             if (targetShelf == null)
             {
-                Debug.LogWarning("[Customer] No shelves available.");
+                Debug.LogWarning("[Customer] FindShelf — no shelves registered or all shelves are unavailable.");
                 yield break;
             }
 
+            Debug.Log($"[Customer] FindShelf — heading to '{targetShelf.name}' at {targetShelf.transform.position}.");
             StoreManager.Instance.UnregisterShelf(targetShelf); // Temporarily remove from pool while browsing
             agent.SetDestination(targetShelf.transform.position + targetShelf.transform.forward * -0.5f);
 
@@ -165,22 +166,26 @@ namespace AsakuShop.Customers
             {
                 if (targetShelf.IsMoving)
                 {
+                    Debug.Log($"[Customer] FindShelf — shelf '{targetShelf.name}' started moving; aborting navigation.");
                     agent.SetDestination(transform.position); // Stop moving if shelf is moving
                     targetShelf = null;
                     yield break;
                 }
                 yield return LookAt(targetShelf.transform);
             }
+            Debug.Log($"[Customer] FindShelf — arrived at '{targetShelf.name}'.");
         }
 
         private IEnumerator BrowseShelf()
         {
             if (targetShelf == null) yield break;
+            Debug.Log($"[Customer] BrowseShelf — browsing '{targetShelf.name}'.");
             overheadUI.ShowStatus("👀");
             while (true)
             {
                 if (targetShelf.IsMoving)
                 {
+                    Debug.Log($"[Customer] BrowseShelf — shelf '{targetShelf.name}' started moving; aborting browse.");
                     targetShelf = null;
                     yield break;
                 }
@@ -189,18 +194,21 @@ namespace AsakuShop.Customers
                 if (targetShelf.PeekItem() != null)
                 {
                     ItemInstance item = targetShelf.PeekItem();
+                    Debug.Log($"[Customer] BrowseShelf — found '{item.Definition.DisplayName}' (price=¥{item.CurrentPrice}, market=¥{item.Definition.EffectiveMarketPrice}).");
                     if (IsWillingToBuy(item))
                     {
+                        Debug.Log($"[Customer] BrowseShelf — willing to buy '{item.Definition.DisplayName}'.");
                         overheadUI.ShowStatus("👍");
-
 
                         ShelfTakeResult taken = targetShelf.TakeItem();
                         if (!taken.HasItem)
                         {
+                            Debug.LogWarning($"[Customer] BrowseShelf — TakeItem returned no item (race condition?); retrying.");
                             yield return null;
                             continue;
                         }
 
+                        Debug.Log($"[Customer] BrowseShelf — took '{taken.Item.Definition.DisplayName}'. Pickup found={taken.Pickup != null}. Inventory size now {Inventory.Count + 1}.");
                         Inventory.Add(taken.Item);
                         if (!targetShelf.IsOpen) targetShelf.Open(true, false);
 
@@ -208,6 +216,7 @@ namespace AsakuShop.Customers
                         string pickTrigger = "PickMedium";
                         if (height < 0.5f) pickTrigger = "PickLow";
                         else if (height > 1.5f) pickTrigger = "PickHigh";
+                        Debug.Log($"[Customer] BrowseShelf — playing animation '{pickTrigger}' (shelfHeight={height:F2}).");
                         animator.SetTrigger(pickTrigger);
 
                         yield return new WaitUntil(() => isPicking);
@@ -251,6 +260,7 @@ namespace AsakuShop.Customers
                     }
                     else
                     {
+                        Debug.Log($"[Customer] BrowseShelf — refused '{item.Definition.DisplayName}' (too expensive or tolerance check failed).");
                         overheadUI.ShowDialog(overpricedDialogue.GetRandomLine());
                         yield return new WaitForSeconds(1f);
                         break; // Done after rejecting the top item; move on to the next shelf visit
@@ -258,6 +268,7 @@ namespace AsakuShop.Customers
                 }
                 else
                 {
+                    Debug.Log($"[Customer] BrowseShelf — shelf '{targetShelf.name}' is empty; moving on.");
                     // Shelf is empty — yield one frame to avoid a tight spin, then exit
                     yield return null;
                     break;
@@ -266,7 +277,10 @@ namespace AsakuShop.Customers
 
             // Return the shelf to the browsing pool so other customers can visit it
             if (targetShelf != null)
+            {
+                Debug.Log($"[Customer] BrowseShelf — returning '{targetShelf.name}' to the browsing pool.");
                 StoreManager.Instance.RegisterShelf(targetShelf);
+            }
         }
 #endregion
 

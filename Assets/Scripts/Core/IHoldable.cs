@@ -2,8 +2,8 @@ using UnityEngine;
 
 namespace AsakuShop.Core
 {
-    // Implemented by world objects that can be picked up and held by the player
-    // (e.g. StorageContainer, ShelfComponent). Provides the data PlayerHands needs
+    // Implemented by any world objects that can be picked up and held by the player
+    // (e.g. StorageContainer, ShelfContainer). Provides the data PlayerHands needs
     // without PlayerHands importing AsakuShop.Storage directly.
     public interface IHoldable
     {
@@ -16,7 +16,7 @@ namespace AsakuShop.Core
     }
 
     // Extended interface for shelf-type holdables that can be wall-mounted.
-    // PlayerHands uses this to access shelf-specific positioning without knowing ShelfComponent.
+    // PlayerHands uses this to access shelf-specific positioning without knowing ShelfContainer.
     public interface IShelfHoldable : IHoldable
     {
         Vector3 RotationOffset { get; }
