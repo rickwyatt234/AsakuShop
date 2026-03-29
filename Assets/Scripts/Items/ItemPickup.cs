@@ -43,8 +43,11 @@ namespace AsakuShop.Items
 
         public void OnExamine()
         {
-            // Examination of loose or shelved items via the world raycast is not allowed.
-            // The examine UI is only opened by PlayerHands when the item is actively held.
+            // Only open the price editor if the player is not already holding something
+            // and the item is currently stocked on a shelf.
+            if (pickupTarget != null && pickupTarget.IsHoldingInteractable) return;
+            if (ItemInstance != null && ItemInstance.IsOnAShelf)
+                CoreEvents.RaiseShelfItemPriceEditRequested(ItemInstance);
         }
 #endregion
     }

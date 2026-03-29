@@ -42,22 +42,26 @@ namespace AsakuShop.Items
         }
 
         // Creates a new instance with default grade and price based on the provided ItemDefinition.
+        // If a player-set price override exists in ItemPriceRegistry for this item type, that
+        // price is used instead of ItemDefinition.BasePrice.
         public ItemInstance(ItemDefinition definition)
         {
             Definition    = definition ?? throw new ArgumentNullException(nameof(definition));
             CurrentGrade  = definition.BaseGrade;
-            CurrentPrice = definition.BasePrice;
+            CurrentPrice  = ItemPriceRegistry.GetEffectivePrice(definition);
             InstanceId    = Guid.NewGuid().ToString();
         }
 
         // Creates a new instance with an explicitly supplied grade. 
         // Crafting outputs and buying crates of items will use this constructor to set the 
         // grade based on recipe results or crate purchase rolls.
+        // If a player-set price override exists in ItemPriceRegistry for this item type, that
+        // price is used instead of ItemDefinition.BasePrice.
         public ItemInstance(ItemDefinition definition, ItemGrade grade)
         {
             Definition    = definition ?? throw new ArgumentNullException(nameof(definition));
             CurrentGrade  = grade;
-            CurrentPrice = definition.BasePrice;
+            CurrentPrice  = ItemPriceRegistry.GetEffectivePrice(definition);
             InstanceId    = Guid.NewGuid().ToString();
         }
 
