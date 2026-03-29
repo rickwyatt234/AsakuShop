@@ -5,7 +5,7 @@ using AsakuShop.Core;
 
 namespace AsakuShop.Storage
 {
-    public class ShelfComponent : MonoBehaviour, IInteractable, IShelfHoldable, IShelfItemProvider
+    public class ShelfComponent : MonoBehaviour, IInteractable, IShelfHoldable, IShelfItemProvider, IMountableHoldable
     {
         public Vector3 Front => transform.TransformPoint(Vector3.forward);
 
@@ -15,8 +15,8 @@ namespace AsakuShop.Storage
         [SerializeField] private Vector3 heldOffset = new Vector3(0, 0.5f, 0);
         [SerializeField] private Quaternion heldRotation = Quaternion.Euler(90, 0, 0);
 
-        [SerializeField] private PreferredStorageType storageType = PreferredStorageType.Dry;
-        public PreferredStorageType StorageType => storageType;
+        [SerializeField] private PreferredStorageType preferredStorageType = PreferredStorageType.Dry;
+        public PreferredStorageType StorageType => preferredStorageType;
 
         public StockingSize[] allowedStockingSizes = new StockingSize[]
                                { StockingSize.Small, StockingSize.Medium, StockingSize.Large };
@@ -39,6 +39,12 @@ namespace AsakuShop.Storage
         [SerializeField] private Vector3 slotStartOffset = new Vector3(-0.9f, 0.9f, 0);
         [SerializeField] private Vector3 rotationOffset = Vector3.zero;
 
+        // --- Mountable Holdable fields ---
+        [SerializeField] private MountMode mountMode = MountMode.Wall;
+        [SerializeField] private MountSurfaceMask allowedSurfaces = MountSurfaceMask.Wall;
+        [SerializeField] private bool alignToSurfaceNormal = true;
+        [SerializeField] private bool allowManualYawRotation = false;
+
         // IHoldable / IShelfHoldable implementation
         string IHoldable.DisplayName => DisplayName;
         Vector3 IHoldable.HeldOffset => heldOffset;
@@ -46,6 +52,14 @@ namespace AsakuShop.Storage
         GameObject IHoldable.GameObject => gameObject;
         Vector3 IShelfHoldable.RotationOffset => rotationOffset;
         float IShelfHoldable.MountOffsetDistance => mountOffsetDistance;
+
+        // IMountableHoldable implementation
+        MountMode IMountableHoldable.MountMode => mountMode;
+        MountSurfaceMask IMountableHoldable.AllowedSurfaces => allowedSurfaces;
+        bool IMountableHoldable.AlignToSurfaceNormal => alignToSurfaceNormal;
+        bool IMountableHoldable.AllowManualYawRotation => allowManualYawRotation;
+        void IMountableHoldable.NotifyMounted() => NotifyMounted();
+        void IMountableHoldable.NotifyPickedUp() => NotifyPickedUp();
 
         // Keep public accessor for code within Storage namespace that uses RotationOffset directly
         public Vector3 RotationOffset => rotationOffset;

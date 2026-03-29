@@ -281,7 +281,7 @@ namespace AsakuShop.Store
         
         private IEnumerator ProcessPayment()
         {
-            bool useCash = Random.value < 0.6f;
+            bool useCash = Random.value < 0.7f;
             SetState(useCash ? State.CashPay : State.CardPay);
 
             customerPayment = useCash
@@ -294,8 +294,19 @@ namespace AsakuShop.Store
             // click it to open the cash register.
             if (useCash && currentCustomer is MonoBehaviour customerMb)
             {
-                var cashInteractable = customerMb.gameObject.AddComponent<CustomerCashInteractable>();
+                //load a prefab interactable from resources folder onto the customer, positioned near their hand. This will be 
+                // what the player clicks to open the cash register.
+                var cashInteractable = Instantiate(Resources.Load<GameObject>("Store/Prefabs/CustomerCashInteractable")).AddComponent<CustomerCashInteractable>();
+                cashInteractable.transform.SetParent(customerMb.transform);
+                cashInteractable.transform.localPosition = new Vector3(0.2f, 1f, 0.5f);
                 cashInteractable.Initialize(this);
+            }
+            else if (!useCash && currentCustomer is MonoBehaviour cardCustomerMb)
+            {
+                var cardInteractable = Instantiate(Resources.Load<GameObject>("Store/Prefabs/CustomerCardInteractable")).AddComponent<CustomerCardInteractable>();
+                cardInteractable.transform.SetParent(cardCustomerMb.transform);
+                cardInteractable.transform.localPosition = new Vector3(0.2f, 1f, 0.5f);
+                cardInteractable.Initialize(this);
             }
 
             // Wait until the player confirms payment by giving change (if any), or confirming on the card terminal.

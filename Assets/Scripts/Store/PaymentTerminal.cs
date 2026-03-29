@@ -15,6 +15,13 @@ namespace AsakuShop.Store
     // All amounts are whole yen (int). No fractions, no decimals.
     public class PaymentTerminal : MonoBehaviour
     {
+        public enum Phase
+        {
+            Entry,   // Player is entering the amount on the keypad.
+            Success, // The correct amount was confirmed; waiting for final confirm.
+        }
+        public Phase CurrentState { get; private set; }
+
         [Header("Camera")]
         [SerializeField, Tooltip("Cinemachine virtual camera that zooms in on the card reader.")]
         private CinemachineCamera zoomCamera;
@@ -24,12 +31,10 @@ namespace AsakuShop.Store
         [Header("Entry Panel — keypad & amount display")]
         [SerializeField] private GameObject entryPanel;
         [SerializeField] private TMP_Text   displayText;
-        [SerializeField] private Button     confirmEntryButton;
 
         [Header("Success Panel — shown after correct amount is entered")]
         [SerializeField] private GameObject successPanel;
         [SerializeField] private TMP_Text   successText;
-        [SerializeField] private Button     finalConfirmButton;
 
         [Header("Timing")]
         [Tooltip("Seconds to wait after the camera cut before enabling keypad input.")]
@@ -45,10 +50,7 @@ namespace AsakuShop.Store
         private void Awake()
         {
             entryPanel?.SetActive(false);
-            successPanel?.SetActive(false);
-
-            confirmEntryButton?.onClick.AddListener(HandleEntryConfirm);
-            finalConfirmButton?.onClick.AddListener(HandleFinalConfirm);
+            successPanel?.SetActive(false);;
 
             if (zoomCamera != null)
             {
@@ -112,18 +114,7 @@ namespace AsakuShop.Store
             RefreshDisplay();
         }
 
-        // Programmatically triggers the active confirm action.
-        // Use this from a CardReaderButton (buttonInput = "confirm") placed over the green button on the mesh.
-        // If the success panel is showing, presses the Final Confirm; otherwise presses the Entry Confirm.
-        public void TryConfirm()
-        {
-            if (successPanel != null && successPanel.activeSelf)
-                HandleFinalConfirm();
-            else
-                HandleEntryConfirm();
-        }
-
-        private void HandleEntryConfirm()
+        public void HandleEntryConfirm()
         {
             if (!inputEnabled) return;
 
@@ -139,12 +130,13 @@ namespace AsakuShop.Store
             inputEnabled = false;
             entryPanel?.SetActive(false);
             successPanel?.SetActive(true);
+            CurrentState = Phase.Success;
 
             if (successText != null)
                 successText.text = $"Payment Confirmed\n¥{requiredAmount:N0}";
         }
 
-        private void HandleFinalConfirm()
+        public void HandleFinalConfirm()
         {
             Close();
             OnPaymentComplete?.Invoke();

@@ -4,21 +4,18 @@ using UnityEngine;
 namespace AsakuShop.Store
 {
     // Attach to the physical cash-drawer GameObject (child of the cash register model).
-    // Call Open() to slide the drawer forward when a cash payment is confirmed.
-    // Call Close() to slide it back (useful if you later need to reset the scene).
-    //
-    // Setup in the Inspector:
-    //   • Set openOffset to the LOCAL direction and distance the drawer should travel
-    //     (e.g. Z = 0.3 slides it 0.3 units along its local forward axis).
-    //   • Adjust duration to taste.
+    // Call Open() to slide the drawer forward all the way out, then wrap it up and backwards on top of the register itself
+    // to save space.
+    // Call Close() to wrap it forwards and down, then slide it back in.
     public class CashDrawer : MonoBehaviour
     {
-        [SerializeField, Tooltip("Local-space translation applied when the drawer opens " +
-            "(e.g. (0, 0, 0.3) slides it 0.3 units along its local forward axis).")]
-        private Vector3 openOffset = new Vector3(0f, 0f, 0.3f);
+        [SerializeField, Tooltip("Local-space translation applied when the drawer opens all the way.")]
+        private Vector3 slideOpenOffset_1 = new Vector3(0f, 0f, 0.3f);
+        [SerializeField, Tooltip("Local-space translation applied when the drawer wraps forward on top of the register.")]
+        private Vector3 slideOpenOffset_2 = new Vector3(0f, 0f, 0.15f);
 
         [SerializeField, Tooltip("Seconds the slide animation takes.")]
-        private float duration = 0.4f;
+        private float duration = 1f;
 
         private Vector3 closedPosition;
         private bool    isOpen;
@@ -33,7 +30,11 @@ namespace AsakuShop.Store
         {
             if (isOpen) return;
             isOpen = true;
-            transform.DOLocalMove(closedPosition + openOffset, duration).SetEase(Ease.OutQuad);
+            // Slide forward all the way, then wrap back on top of the register.
+            transform.DOLocalMove(closedPosition + slideOpenOffset_1, duration).SetEase(Ease.OutQuad).OnComplete(() =>
+            {
+                transform.DOLocalMove(closedPosition + slideOpenOffset_2, duration).SetEase(Ease.OutQuad);
+            });
         }
 
         // Slides the drawer closed. Safe to call even if already closed.
@@ -41,7 +42,11 @@ namespace AsakuShop.Store
         {
             if (!isOpen) return;
             isOpen = false;
-            transform.DOLocalMove(closedPosition, duration).SetEase(Ease.InQuad);
+            // Wrap forward on top of the register, then slide back in.
+            transform.DOLocalMove(closedPosition + slideOpenOffset_2, duration).SetEase(Ease.OutQuad).OnComplete(() =>
+            {
+                transform.DOLocalMove(closedPosition, duration).SetEase(Ease.OutQuad);
+            });
         }
     }
 }

@@ -29,8 +29,7 @@ namespace AsakuShop.Store
             "  '0'–'9'        — digit keys\n" +
             "  'back'         — backspace / undo last digit\n" +
             "  'clear'        — clears the entire keyed entry\n" +
-            "  'confirm'      — Cash/Tend button\n" +
-            "  'finalconfirm' — Final Confirm button")]
+            "  'confirm'      — Cash/Tend button\n")]
         private string buttonInput;
 
         public void OnInteract()
@@ -40,10 +39,16 @@ namespace AsakuShop.Store
             switch (buttonInput)
             {
                 case "confirm":
-                    register.TryConfirm();
-                    break;
-                case "finalconfirm":
-                    register.TryFinalConfirm();
+                    if (register.CurrentPhase == CashRegister.Phase.Entry)
+                    {
+                        register.HandleEntryConfirm();
+                        break;   
+                    }
+                    else if (register.CurrentPhase == CashRegister.Phase.Change)
+                    {
+                        register.HandleFinalConfirm();
+                        break;
+                    }
                     break;
                 case "clear":
                     register.ClearEntry();

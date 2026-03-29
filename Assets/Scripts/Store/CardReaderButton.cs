@@ -34,7 +34,10 @@ namespace AsakuShop.Store
             if (terminal == null) return;
 
             if (buttonInput == "confirm")
-                terminal.TryConfirm();
+                if (terminal.CurrentState == PaymentTerminal.Phase.Entry)
+                    terminal.HandleEntryConfirm();
+                else if (terminal.CurrentState == PaymentTerminal.Phase.Success)
+                    terminal.HandleFinalConfirm();
             else
                 terminal.Append(buttonInput);
         }

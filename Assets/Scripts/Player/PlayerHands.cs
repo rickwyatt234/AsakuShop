@@ -8,7 +8,6 @@ using AsakuShop.Storage;
 using AsakuShop.Store;
 using DG.Tweening;
 
-
 namespace AsakuShop.Player
 {
     public class PlayerHands : MonoBehaviour, IPickupTarget
@@ -24,12 +23,13 @@ namespace AsakuShop.Player
 
         public IHoldable heldContainer;
         public IShelfHoldable heldShelf;
+        public IMountableHoldable heldMountable;
 
         private bool previousInteractState = false;
         private bool previousExamineState = false;
         private bool interactPressedThisFrame = false;
         private bool examinePressedThisFrame = false;
-        public bool IsHoldingInteractable => heldItem != null || heldContainer != null || heldShelf != null;
+        public bool IsHoldingInteractable => heldItem != null || heldContainer != null || heldShelf != null || heldMountable != null;
 
         private GameObject recentlyDroppedObject = null;
         private float dropIgnoreTimer = 0f;
@@ -51,7 +51,6 @@ namespace AsakuShop.Player
         [HideInInspector] public GameObject placementPreviewVisual;
         [HideInInspector] public bool validPlacement;
 #endregion
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #region Unity Methods
@@ -85,7 +84,6 @@ namespace AsakuShop.Player
                 dropIgnoreTimer -= Time.deltaTime;
                 if (dropIgnoreTimer <= 0f)
                 {
-                    //Debug.Log($"[DROP_IGNORE] Timer expired for {recentlyDroppedObject.name}");
                     recentlyDroppedObject = null;
                 }
             }
@@ -101,7 +99,6 @@ namespace AsakuShop.Player
             CoreEvents.OnPhaseChanged -= HandlePhaseChanged;
         }
 #endregion
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #region Interaction
@@ -130,61 +127,54 @@ namespace AsakuShop.Player
         {
             if (heldItem != null && heldItemPickup != null)
                 return heldItemPickup;
-            // StorageContainer and ShelfComponent both implement IInteractable; cast is safe
             if (heldContainer != null)
                 return heldContainer as IInteractable;
+            if (heldMountable != null && heldMountable is IInteractable interactable)
+                return interactable;
             if (heldShelf != null)
                 return heldShelf as IInteractable;
             return null;
         }
 #endregion
 
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #region Item Pickup
         public void TryPickupInteractable(GameObject interactableObject)
         {
-            //Debug.Log($"[PICKUP] Called on {interactableObject.name}. interactPressedThisFrame: {interactPressedThisFrame}");
-
             if (GameStateController.Instance.CurrentPhase == GamePhase.Checkout)
-            {
-                //Debug.Log("[PICKUP] BLOCKED: Player is in Checkout phase");
                 return;
-            }
 
             if (interactableObject == recentlyDroppedObject)
-            {
-                //Debug.Log("[PICKUP] IGNORED: Object was recently dropped");
                 return;
-            }
 
             if (InventoryState.IsOpen) return;
             if (GameStateController.Instance.CurrentPhase != GamePhase.Playing) return;
 
-
-            IShelfHoldable shelf     = interactableObject.GetComponent<IShelfHoldable>();
-            IHoldable container      = shelf == null ? interactableObject.GetComponent<IHoldable>() : null;
-            ItemPickup itemPickup    = interactableObject.GetComponent<ItemPickup>();
+            IMountableHoldable mountable = interactableObject.GetComponent<IMountableHoldable>();
+            IHoldable container = mountable == null ? interactableObject.GetComponent<IHoldable>() : null;
+            ItemPickup itemPickup = interactableObject.GetComponent<ItemPickup>();
 
             if (itemPickup != null || container != null)
             {
-                //Debug.Log($"[PICKUP] Item/Container requires interactPressedThisFrame. Current: {interactPressedThisFrame}");
-
                 if (!interactPressedThisFrame) 
-                {
-                    //Debug.Log("[PICKUP] BLOCKED: interactPressedThisFrame is false");
-
                     return;
-                }
             }
-            else if (shelf != null && !IsShelfWallMounted(shelf))
+            else if (mountable != null)
             {
-                //Debug.Log($"[PICKUP] Floor Shelf requires interactPressedThisFrame. Current: {interactPressedThisFrame}");
-
-                if (!interactPressedThisFrame) 
+                // If wall-mounted, allow pickup on examine; otherwise require interact
+                bool isWallMounted = false;
+                if (mountable.AllowedSurfaces.HasFlag(MountSurfaceMask.Wall) && mountable.AlignToSurfaceNormal)
                 {
-                    //Debug.Log("[PICKUP] BLOCKED: interactPressedThisFrame is false");
-
+                    var shelfComp = interactableObject.GetComponent<ShelfComponent>();
+                    if (shelfComp != null)
+                        isWallMounted = shelfComp.IsShelfWallMounted(shelfComp);
+                }
+                if (isWallMounted)
+                {
+                    // Allow pickup on examine
+                }
+                else if (!interactPressedThisFrame)
+                {
                     return;
                 }
             }
@@ -195,31 +185,25 @@ namespace AsakuShop.Player
                 heldItemPickup = itemPickup;
                 InstantiateHeldItemVisual();
                 interactableObject.SetActive(false);
-                //Debug.Log($"Picked up item: {heldItem.Definition.DisplayName}");
             }
-            else if (shelf != null)
+            else if (mountable != null)
             {
-                //Debug.Log("[PICKUP] Picking up shelf");
+                mountable.NotifyPickedUp();
 
-                // Before holding the shelf, eject any stocked items so they fall to the floor.
-                ShelfComponent shelfComponent = shelf.GameObject.GetComponent<ShelfComponent>();
+                // If ShelfComponent, keep eject/clear logic
+                var shelfComponent = interactableObject.GetComponent<ShelfComponent>();
                 if (shelfComponent != null)
                 {
-                    shelfComponent.NotifyPickedUp();
                     StoreManager.Instance?.UnregisterShelf(shelfComponent);
                     shelfComponent.EjectAllStockedItems();
+                    var storageUnit = interactableObject.GetComponent<IStorageUnit>();
+                    if (storageUnit != null)
+                        storageUnit.ClearAllItems();
                 }
 
-                // Also clear the shelf's logical storage data so the shelf starts empty.
-                IStorageUnit storageUnit = shelf.GameObject.GetComponent<IStorageUnit>();
-                if (storageUnit != null)
-                    storageUnit.ClearAllItems();
-
-                heldShelf = shelf;
-
-                heldItemVisual = shelf.GameObject;
+                heldMountable = mountable;
+                heldItemVisual = mountable.GameObject;
                 heldItemVisualTransform = heldItemVisual.transform;
-                // Parent to camera — Unity preserves world position, giving us the correct start local pos.
                 heldItemVisualTransform.SetParent(playerCamera);
 
                 Rigidbody rb = heldItemVisual.GetComponent<Rigidbody>();
@@ -227,24 +211,19 @@ namespace AsakuShop.Player
                 foreach (Collider col in heldItemVisual.GetComponentsInChildren<Collider>())
                     col.enabled = false;
 
-                // DOLocalMove animates from the shelf's current local position to the held offset.
-                heldItemVisualTransform.DOLocalMove(shelf.HeldOffset, PICKUP_ANIM_DURATION)
+                heldItemVisualTransform.DOLocalMove(mountable.HeldOffset, PICKUP_ANIM_DURATION)
                     .SetEase(Ease.OutCubic);
-                // DOLocalRotate smoothly orients the shelf to the held rotation.
-                heldItemVisualTransform.DOLocalRotate(shelf.HeldRotation.eulerAngles, PICKUP_ANIM_DURATION)
+                heldItemVisualTransform.DOLocalRotate(mountable.HeldRotation.eulerAngles, PICKUP_ANIM_DURATION)
                     .SetEase(Ease.OutCubic);
-                //Debug.Log($"Picked up: {shelf.DisplayName}");
-                shelfComponent.IsMoving = true;
+
+                // For compatibility with old code
+                heldShelf = (mountable is IShelfHoldable shelfHoldable) ? shelfHoldable : null;
             }
             else if (container != null)
             {
-                //Debug.Log("[PICKUP] Picking up container");
-
                 heldContainer = container;
-
                 heldItemVisual = container.GameObject;
                 heldItemVisualTransform = heldItemVisual.transform;
-                // Parent to camera — Unity preserves world position, giving us the correct start local pos.
                 heldItemVisualTransform.SetParent(playerCamera);
 
                 Rigidbody rb = heldItemVisual.GetComponent<Rigidbody>();
@@ -252,21 +231,13 @@ namespace AsakuShop.Player
                 foreach (Collider col in heldItemVisual.GetComponentsInChildren<Collider>())
                     col.enabled = false;
 
-                // DOLocalMove animates from the container's current local position to the held offset.
                 heldItemVisualTransform.DOLocalMove(container.HeldOffset, PICKUP_ANIM_DURATION)
                     .SetEase(Ease.OutCubic);
-                // DOLocalRotate smoothly orients the container to the held rotation.
                 heldItemVisualTransform.DOLocalRotate(container.HeldRotation.eulerAngles, PICKUP_ANIM_DURATION)
                     .SetEase(Ease.OutCubic);
-                //Debug.Log($"Picked up storage container: {container.DisplayName}");
-            }
-            else
-            {
-                //Debug.Log("[PLAYER] Not looking at anything");
             }
         }
 #endregion
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #region Placement
@@ -276,7 +247,6 @@ namespace AsakuShop.Player
             if (!IsHoldingInteractable) return;
             if (GameStateController.Instance.CurrentPhase != GamePhase.Playing) return;
             if (InventoryState.IsOpen) return;
-
 
             if (interactPressed)
             {
@@ -291,43 +261,35 @@ namespace AsakuShop.Player
                     }
                 }
 
-
                 if (validPlacement)
                 {
-                    //Debug.Log($"[PLACEMENT] Placing container/shelf (validPlacement is TRUE)");
                     TryPlaceInteractable();
                 }
                 else
                 {
-                    //Debug.Log($"[PLACEMENT] Dropping container/shelf (validPlacement is FALSE)");
                     DropInteractable();
                 }
             }
 
             if (examinePressed)
             {
-                // First, try to store into a container
                 Ray ray = new Ray(playerCamera.position, playerCamera.forward);
                 if (Physics.Raycast(ray, out RaycastHit hit, 3f))
                 {
                     IHoldable container = hit.collider.GetComponent<IHoldable>();
                     if (container != null && !(container is IShelfHoldable) && heldItem != null)
                     {
-                        //Debug.Log($"Attempting to store {heldItem.Definition.DisplayName} into {container.DisplayName}");
                         TryStoreItem(container);
                         return;
                     }
                 }
 
-                // Otherwise, examine the held item
                 if (heldItem != null)
                 {
-                    //Debug.Log($"Examining held item: {heldItem.Definition.DisplayName}");
                     CoreEvents.RaiseExamineRequested(heldItem);
                 }
             }
         }
-
 
         private void TryPlaceInteractable()
         {
@@ -379,64 +341,55 @@ namespace AsakuShop.Player
 
                 heldContainer = null;
             }
-            else if (heldShelf != null)
+            else if (heldMountable != null)
             {
-                Ray wallRay = new Ray(playerCamera.position, playerCamera.forward);
-                bool isWallMount = Physics.Raycast(wallRay, out RaycastHit hit, 5f) &&
-                    hit.collider.gameObject.layer == LayerMask.NameToLayer("Wall");
-
-                heldItemVisualTransform.rotation = isWallMount
-                    ? Quaternion.LookRotation(hit.normal, Vector3.up) * Quaternion.Euler(heldShelf.RotationOffset)
-                    : Quaternion.Euler(previewRotation);
-
-
-
-                List<Transform> itemsToUnparent = new();
-                foreach (Transform child in heldItemVisualTransform)
+                bool placedOnWall = false;
+                bool placedOnGround = false;
+                Ray ray = new Ray(playerCamera.position, playerCamera.forward);
+                RaycastHit hit;
+                if (Physics.Raycast(ray, out hit, 5f))
                 {
-                    if (child.GetComponent<ItemPickup>() != null)
-                        itemsToUnparent.Add(child);
-                }
-                foreach (Transform item in itemsToUnparent)
-                {
-                    item.SetParent(null);
-                    if (!isWallMount)
-                    {
-                        if (item.TryGetComponent(out Rigidbody itemRb))
-                        {
-                            itemRb.isKinematic = false;
-                            itemRb.useGravity = true;
-                        }
-                        foreach (Collider col in item.GetComponentsInChildren<Collider>())
-                            col.enabled = true;
-                    }
+                    int layer = hit.collider.gameObject.layer;
+                    if (heldMountable.AllowedSurfaces.HasFlag(MountSurfaceMask.Wall) && layer == LayerMask.NameToLayer("Wall"))
+                        placedOnWall = true;
+                    if (heldMountable.AllowedSurfaces.HasFlag(MountSurfaceMask.Ground) && layer == LayerMask.NameToLayer("Ground"))
+                        placedOnGround = true;
                 }
 
-                foreach (Collider col in heldShelf.GameObject.GetComponentsInChildren<Collider>())
+                if (placedOnWall && heldMountable.AlignToSurfaceNormal)
+                {
+                    heldItemVisualTransform.rotation = Quaternion.LookRotation(hit.normal, Vector3.up) *
+                                                       Quaternion.Euler((heldMountable is IShelfHoldable sh) ? sh.RotationOffset : Vector3.zero);
+                }
+                else
+                {
+                    heldItemVisualTransform.rotation = Quaternion.Euler(previewRotation);
+                }
+
+                foreach (Collider col in heldMountable.GameObject.GetComponentsInChildren<Collider>())
                     col.enabled = true;
-                if (heldShelf.GameObject.TryGetComponent(out Rigidbody shelfRb))
-                {
-                    shelfRb.isKinematic = isWallMount;
-                    shelfRb.useGravity = !isWallMount;
-                }
-                //Debug.Log($"IsShelfWallMounted(heldShelf): {IsShelfWallMounted(heldShelf)}");
-                heldShelf = null;
 
-                // Notify and register with StoreManager if the shelf was placed on a wall inside the store.
-                ShelfComponent sc = heldItemVisualTransform?.GetComponent<ShelfComponent>();
-                if (sc != null && isWallMount)
+                if (heldMountable.GameObject.TryGetComponent(out Rigidbody rb))
                 {
-                    sc.NotifyMounted();
-                    var store = StoreManager.Instance;
-                    if (store != null && store.StoreBounds.Contains(sc.transform.position))
-                        store.RegisterShelf(sc);
-                    else
-                        Debug.Log($"[PlayerHands] {sc.name} mounted outside store bounds — not registered.");
+                    rb.isKinematic = placedOnWall;
+                    rb.useGravity = !placedOnWall;
                 }
-                
-                ShelfComponent shelfComponent = heldItemVisualTransform?.GetComponent<ShelfComponent>();
-                if (shelfComponent != null)
+
+                var shelfComponent = heldMountable.GameObject.GetComponent<ShelfComponent>();
+                if (shelfComponent != null && placedOnWall)
+                {
+                    shelfComponent.NotifyMounted();
+                    var store = StoreManager.Instance;
+                    if (store != null && store.StoreBounds.Contains(shelfComponent.transform.position))
+                        store.RegisterShelf(shelfComponent);
+                    else
+                        Debug.Log($"[PlayerHands] {shelfComponent.name} mounted outside store bounds — not registered.");
                     shelfComponent.IsMoving = false;
+                }
+
+                heldMountable.NotifyMounted();
+                heldMountable = null;
+                heldShelf = null;
             }
 
             if (placementPreviewVisual != null)
@@ -450,49 +403,31 @@ namespace AsakuShop.Player
             previewRotation = Vector3.zero;
         }
 
-
-
         private void TryStoreItem(IHoldable container)
         {
             if (heldItem == null || container == null) 
-            {
-                //Debug.Log("[STORE] Failed: heldItem or container is null");
                 return;
-            }
 
             IStorageUnit storageUnit = container.GameObject.GetComponent<IStorageUnit>();
             if (storageUnit == null)
-            {
-                //Debug.Log("[STORE] Failed: No IStorageUnit found on container");
                 return;
-            }
             
             if (storageUnit.TryAddItem(heldItem))
             {
-                //Debug.Log($"Stored {heldItem.Definition.DisplayName} in {container.DisplayName}");
                 ClearHeldState();
                 CoreEvents.RaiseStorageUIRefreshRequested(container.GameObject);
             }
-            else
-            {
-                //Debug.Log($"[STORE] Failed to add item to storage unit. Current Weight: {storageUnit.GetCurrentWeight()}, Item Weight: {heldItem.Definition.WeightKg}, Container Capacity: {storageUnit.GetCapacity()}");
-            }
         }
-
 
         private void TryStockItemOnShelf(IShelfHoldable shelf)
         {
-            // Guard 1: both heldItem and shelf must be present.
             if (heldItem == null || shelf == null) return;
-
-            // Guard 2: the shelf must be wall-mounted — floor shelves are picked up, not stocked.
             if (!IsShelfWallMounted(shelf))
             {
                 Debug.Log("[STOCK] Cannot stock item on a non-wall-mounted shelf.");
                 return;
             }
 
-            // Guard 3: shelf must expose IStorageUnit to register items.
             IStorageUnit storageUnit = shelf.GameObject.GetComponent<IStorageUnit>();
             if (storageUnit == null)
             {
@@ -500,7 +435,6 @@ namespace AsakuShop.Player
                 return;
             }
 
-            // Guard 4: shelf must expose IShelfLayout to compute slot positions.
             IShelfLayout shelfLayout = shelf.GameObject.GetComponent<IShelfLayout>();
             if (shelfLayout == null)
             {
@@ -508,14 +442,12 @@ namespace AsakuShop.Player
                 return;
             }
 
-            // Guard 5: verify the item can be stocked (size allowed, contiguous slots available).
             if (!storageUnit.CanAddItem(heldItem))
             {
                 Debug.Log("Cannot stock item — shelf is full or item size not supported.");
                 return;
             }
 
-            // Register the item in the shelf's data; this assigns the anchor slot index.
             ItemInstance itemToStock = heldItem;
             if (!storageUnit.TryAddItem(itemToStock))
             {
@@ -523,58 +455,40 @@ namespace AsakuShop.Player
                 return;
             }
 
-            // Step 6: compute the local-space slot position (now that the anchor is assigned).
-            // GetSlotPosition returns the centre of the item's occupied run in local shelf space.
             Vector3 localOffset = shelfLayout.GetSlotPosition(itemToStock) + shelfLayout.GetStockingOffset();
             Vector3 stockingRotationEuler = shelfLayout.GetStockingRotation();
 
-            // Step 7: move the existing heldItemVisual — do NOT destroy it and create a new one.
             GameObject visual = heldItemVisual;
-
-            // 7a. Parent the visual to the shelf transform so it travels with the shelf.
             visual.transform.SetParent(shelf.GameObject.transform);
 
-            // Disable colliders during the tween to avoid physics interference.
             Collider[] colliders = visual.GetComponentsInChildren<Collider>();
             foreach (Collider col in colliders)
                 col.enabled = false;
 
-            // 7b. DOLocalJump moves the transform to a local-space target position while arcing upward.
-            //     Parameters: (Vector3 endValue, float jumpPower, int numJumps, float duration)
-            //     jumpPower controls arc height; numJumps = 1 means a single arc; duration is in seconds.
             visual.transform.DOLocalJump(localOffset, STOCKING_JUMP_POWER, 1, STOCKING_ANIM_DURATION)
                 .OnComplete(() =>
                 {
-                    // Re-enable colliders once the tween finishes.
                     foreach (Collider col in colliders)
                         col.enabled = true;
 
-                    // Ensure a Rigidbody exists; keep it kinematic so the item stays put on the shelf.
                     if (!visual.TryGetComponent(out Rigidbody rb))
                         rb = visual.AddComponent<Rigidbody>();
                     rb.isKinematic = true;
                     rb.useGravity  = false;
 
-                    // Ensure ItemPickup exists and bind it to the item so customers can interact later.
                     if (!visual.TryGetComponent(out ItemPickup pickup))
                         pickup = visual.AddComponent<ItemPickup>();
                     pickup.Initialize(itemToStock);
 
-                    // Mark the item as shelved so shelf-browsing and pricing logic can act on it.
                     itemToStock.IsOnAShelf = true;
 
-                    // Set layer on the visual and all its children so raycasts find it correctly.
                     int itemLayer = LayerMask.NameToLayer("Item");
                     foreach (Transform t in visual.GetComponentsInChildren<Transform>(true))
                         t.gameObject.layer = itemLayer;
                 });
 
-            // 7c. DOLocalRotate smoothly rotates the transform to the target local Euler angles over the given duration.
-            //     The rotation is applied in local space relative to the shelf, so items face the correct
-            //     direction regardless of the shelf's world orientation.
             visual.transform.DOLocalRotate(stockingRotationEuler, STOCKING_ANIM_DURATION);
 
-            // Step 9: clear held-item state without destroying the visual (it is now parented to the shelf).
             heldItem = null;
             heldItemPickup = null;
             heldItemVisual = null;
@@ -587,16 +501,13 @@ namespace AsakuShop.Player
             previewRotation = Vector3.zero;
         }
 
-
         private void DropInteractable()
         {
-            //Drop in front of the player at the preview position, or if no preview, slightly in front of the player
             Vector3 dropPosition = placementPreviewPosition;
             Quaternion dropRotation = Quaternion.Euler(previewRotation);
-            
+
             if (heldItem != null)
             {
-                //Debug.Log("[DROP] Dropping item");
                 ItemInstance itemToDrop = heldItem;
                 GameObject droppedObject = Instantiate(
                     itemToDrop.Definition.WorldPrefab,
@@ -623,7 +534,6 @@ namespace AsakuShop.Player
             }
             else if (heldContainer != null)
             {
-                //Debug.Log("[DROP] Dropping container");
                 heldItemVisualTransform.SetParent(null);
                 heldItemVisualTransform.position = dropPosition;
                 heldItemVisualTransform.rotation = Quaternion.Euler(previewRotation);
@@ -651,7 +561,6 @@ namespace AsakuShop.Player
             }
             else if (heldShelf != null)
             {
-                //////Debug.Log("[DROP] Dropping shelf");
                 heldItemVisualTransform.SetParent(null);
                 heldItemVisualTransform.position = dropPosition;
                 heldItemVisualTransform.rotation = Quaternion.Euler(previewRotation);
@@ -693,10 +602,36 @@ namespace AsakuShop.Player
                 previewRotation = Vector3.zero;
                 return;
             }
+            else if (heldMountable != null)
+            {
+                heldItemVisualTransform.SetParent(null);
+                heldItemVisualTransform.position = dropPosition;
+                heldItemVisualTransform.rotation = Quaternion.Euler(previewRotation);
+
+                foreach (Collider col in heldMountable.GameObject.GetComponentsInChildren<Collider>())
+                    col.enabled = true;
+
+                if (heldMountable.GameObject.TryGetComponent(out Rigidbody rb))
+                {
+                    rb.isKinematic = false;
+                    rb.useGravity = true;
+                    rb.linearVelocity = Vector3.zero;
+                }
+
+                recentlyDroppedObject = heldMountable.GameObject;
+                dropIgnoreTimer = DROP_IGNORE_DURATION;
+
+                heldItemVisual = null;
+                heldItemVisualTransform = null;
+                if (heldMountable is IShelfHoldable) heldShelf = null;
+                heldMountable = null;
+                if (placementPreviewVisual != null) { Destroy(placementPreviewVisual); placementPreviewVisual = null; }
+                previewRotation = Vector3.zero;
+                return;
+            }
 
             ClearHeldState();
         }
-
 
         private void ClearHeldState()
         {
@@ -709,7 +644,6 @@ namespace AsakuShop.Player
         }
 #endregion
 
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #region Preview Visuals
         private void InstantiateHeldItemVisual()
@@ -717,7 +651,6 @@ namespace AsakuShop.Player
             if (heldItemVisual != null)
                 Destroy(heldItemVisual);
 
-            // Spawn at the pickup's world position so the DOTween arc starts from there.
             Vector3 spawnWorldPos = heldItemPickup != null
                 ? heldItemPickup.transform.position
                 : playerCamera.position + playerCamera.forward;
@@ -727,7 +660,6 @@ namespace AsakuShop.Player
 
             heldItemVisual = Instantiate(heldItem.Definition.WorldPrefab, spawnWorldPos, spawnWorldRot);
             heldItemVisualTransform = heldItemVisual.transform;
-            // Parent to camera — Unity converts the world pos/rot to local space automatically.
             heldItemVisualTransform.SetParent(playerCamera);
 
             Rigidbody rb = heldItemVisual.GetComponent<Rigidbody>();
@@ -736,36 +668,30 @@ namespace AsakuShop.Player
             foreach (Collider col in heldItemVisual.GetComponentsInChildren<Collider>())
                 col.enabled = false;
 
-            // DOLocalJump animates from the current local position (world spawn pos in camera space)
-            // to the held position, with a small arc for a natural "picked up" feel.
-            // Parameters: (endValue, jumpPower, numJumps, duration)
             heldItemVisualTransform.DOLocalJump(
                 new Vector3(0.5f, -0.5f, 1f),
                 0.15f, 1, PICKUP_ANIM_DURATION)
                 .SetEase(Ease.OutCubic);
 
-            // DOLocalRotate smoothly spins the item to the standard held orientation.
-            // -90 on X corrects world prefabs that are authored laying on their side.
             heldItemVisualTransform.DOLocalRotate(
                 Quaternion.Euler(-90f, 90f, 0f).eulerAngles,
                 PICKUP_ANIM_DURATION)
                 .SetEase(Ease.OutCubic);
         }
 
-
         private void HandlePlacementPreview()
         {
             bool holdingItem = heldItem != null;
             bool holdingContainer = heldContainer != null;
-            bool holdingShelf = heldShelf != null;
+            bool holdingMountable = heldMountable != null;
 
-            if (!holdingItem && !holdingContainer && !holdingShelf) return;
+            if (!holdingItem && !holdingContainer && !holdingMountable) return;
             if (GameStateController.Instance.CurrentPhase != GamePhase.Playing) return;
 
             Vector3 previewPos = playerCamera.position + playerCamera.forward * 2f;
             validPlacement = true;
 
-            if (holdingShelf)
+            if (holdingMountable)
             {
                 if (placementPreviewVisual == null)
                 {
@@ -773,9 +699,6 @@ namespace AsakuShop.Player
                     foreach (Collider col in placementPreviewVisual.GetComponentsInChildren<Collider>())
                         col.enabled = false;
                     if (placementPreviewVisual.TryGetComponent(out Rigidbody rb)) Destroy(rb);
-                    // Remove the IShelfHoldable component from preview to avoid logic side effects
-                    Component shelfComp = placementPreviewVisual.GetComponent<IShelfHoldable>() as Component;
-                    if (shelfComp != null) Destroy(shelfComp);
                     ApplyPreviewMaterial(placementPreviewVisual);
                 }
 
@@ -785,17 +708,22 @@ namespace AsakuShop.Player
                 if (Physics.Raycast(forwardRay, out RaycastHit hit, 5f))
                 {
                     int layer = hit.collider.gameObject.layer;
-                    if (layer == LayerMask.NameToLayer("Wall"))
+                    bool wallAllowed = heldMountable.AllowedSurfaces.HasFlag(MountSurfaceMask.Wall);
+                    bool groundAllowed = heldMountable.AllowedSurfaces.HasFlag(MountSurfaceMask.Ground);
+
+                    if (wallAllowed && layer == LayerMask.NameToLayer("Wall"))
                     {
                         validPlacement = true;
-                        previewPos = hit.point + hit.normal * heldShelf.MountOffsetDistance;
-                        Quaternion wallRotation = Quaternion.LookRotation(hit.normal, Vector3.up)
-                                                  * Quaternion.Euler(heldShelf.RotationOffset);
+                        previewPos = hit.point + hit.normal * (heldMountable is IShelfHoldable sh ? sh.MountOffsetDistance : 0.5f);
+                        Quaternion wallRotation = heldMountable.AlignToSurfaceNormal
+                            ? Quaternion.LookRotation(hit.normal, Vector3.up) *
+                            Quaternion.Euler((heldMountable is IShelfHoldable sh2) ? sh2.RotationOffset : Vector3.zero)
+                            : Quaternion.Euler(previewRotation);
                         placementPreviewVisual.transform.SetPositionAndRotation(previewPos, wallRotation);
                         placementPreviewPosition = previewPos;
                         return;
                     }
-                    else if (layer == LayerMask.NameToLayer("Ground"))
+                    else if (groundAllowed && layer == LayerMask.NameToLayer("Ground"))
                     {
                         validPlacement = true;
                         previewPos = hit.point;
@@ -820,44 +748,43 @@ namespace AsakuShop.Player
             }
             else if (holdingContainer)
             {
-                validPlacement = false;  // Containers never "place"—they always drop
-                
+                validPlacement = false;
+
                 if (placementPreviewVisual == null)
                 {
                     placementPreviewVisual = Instantiate(heldItemVisual);
                     foreach (Collider col in placementPreviewVisual.GetComponentsInChildren<Collider>())
                         col.enabled = false;
                     if (placementPreviewVisual.TryGetComponent(out Rigidbody rb)) Destroy(rb);
-                    Component si = placementPreviewVisual.GetComponent(typeof(IStorageUnit)) as Component;
-                    if (si != null) Destroy(si);
                     ApplyPreviewMaterial(placementPreviewVisual);
                     placementPreviewVisual.transform.rotation = Quaternion.Euler(previewRotation);
                 }
-                
+
                 previewPos = playerCamera.position + playerCamera.forward * 2f;
                 placementPreviewVisual.transform.position = previewPos;
                 placementPreviewPosition = previewPos;
             }
         }
 
-
         private void HandlePreviewRotation()
         {
             bool holdingItem = heldItem != null;
             bool holdingContainer = heldContainer != null;
-            bool holdingShelf = heldShelf != null;
+            bool holdingMountable = heldMountable != null;
 
-            if (!holdingItem && !holdingContainer && !holdingShelf)
+            if (!holdingItem && !holdingContainer && !holdingMountable)
             {
                 previewRotation = Vector3.zero;
                 return;
             }
 
-            if (holdingShelf)
+            if (holdingMountable)
             {
                 Ray wallCheckRay = new Ray(playerCamera.position, playerCamera.forward);
-                if (Physics.Raycast(wallCheckRay, out RaycastHit hit, 5f) &&
-                    hit.collider.gameObject.layer == LayerMask.NameToLayer("Wall"))
+                if (heldMountable.AllowedSurfaces.HasFlag(MountSurfaceMask.Wall) &&
+                    Physics.Raycast(wallCheckRay, out RaycastHit hit, 5f) &&
+                    hit.collider.gameObject.layer == LayerMask.NameToLayer("Wall") &&
+                    heldMountable.AlignToSurfaceNormal)
                 {
                     previewRotation = Vector3.zero;
                     return;
@@ -867,7 +794,8 @@ namespace AsakuShop.Player
             float scrollInput = Mouse.current.scroll.ReadValue().y / 20f;
             if (scrollInput != 0)
             {
-                if (input.rotatePreviewModifier)
+                bool allowYaw = holdingMountable ? heldMountable.AllowManualYawRotation : true;
+                if (input.rotatePreviewModifier && allowYaw)
                     previewRotation.y += scrollInput * 90f;
                 else
                     previewRotation.x += scrollInput * 90f;
@@ -901,7 +829,6 @@ namespace AsakuShop.Player
         }
 #endregion
 
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #region Helpers
         public bool IsLookingAtSuitableShelfMountingPosition
@@ -928,7 +855,6 @@ namespace AsakuShop.Player
                 }
             }
         }
-
 
         private bool IsShelfWallMounted(IShelfHoldable shelf)
         {
@@ -977,7 +903,6 @@ namespace AsakuShop.Player
             return null;
         }
 #endregion
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #region Debugging
