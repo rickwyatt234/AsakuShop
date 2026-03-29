@@ -617,6 +617,7 @@ namespace AsakuShop.Player
                 heldItemVisual = null;
                 heldItemVisualTransform = null;
                 heldShelf = null;
+                heldMountable = null;
                 if (placementPreviewVisual != null) { Destroy(placementPreviewVisual); placementPreviewVisual = null; }
                 previewRotation = Vector3.zero;
                 return;
