@@ -162,21 +162,12 @@ namespace AsakuShop.Player
             else if (mountable != null)
             {
                 // Determine whether the object is already mounted (placed on a surface).
-                // Wall-mounted: detected via the ShelfComponent raycast helper.
-                // Floor-mounted: detected via the ShelvingUnitComponent.IsMounted flag.
                 bool isMounted = false;
-                if (mountable.AllowedSurfaces.HasFlag(MountSurfaceMask.Wall) && mountable.AlignToSurfaceNormal)
-                {
-                    var shelfComp = interactableObject.GetComponent<ShelfComponent>();
-                    if (shelfComp != null)
-                        isMounted = shelfComp.IsShelfWallMounted(shelfComp);
-                }
-                else if (mountable.AllowedSurfaces.HasFlag(MountSurfaceMask.Ground))
-                {
-                    var shelvingUnit = interactableObject.GetComponent<ShelvingUnitComponent>();
-                    if (shelvingUnit != null)
-                        isMounted = shelvingUnit.IsMounted;
-                }
+                var shelfContainer = interactableObject.GetComponent<ShelfContainer>();
+                if (shelfContainer != null)
+                    isMounted = shelfContainer.IsMounted;
+
+                Debug.Log($"[PlayerHands] TryPickupInteractable — mountable '{interactableObject.name}', isMounted={isMounted}.");
 
                 if (isMounted)
                 {
@@ -200,24 +191,14 @@ namespace AsakuShop.Player
             {
                 mountable.NotifyPickedUp();
 
-                // If ShelfComponent, keep eject/clear logic
-                var shelfComponent = interactableObject.GetComponent<ShelfComponent>();
-                if (shelfComponent != null)
+                // Eject and clear all stocked items from a ShelfContainer when picked up.
+                var shelfContainer = interactableObject.GetComponent<ShelfContainer>();
+                if (shelfContainer != null)
                 {
-                    StoreManager.Instance?.UnregisterShelf(shelfComponent);
-                    shelfComponent.EjectAllStockedItems();
-                    var storageUnit = interactableObject.GetComponent<IStorageUnit>();
-                    if (storageUnit != null)
-                        storageUnit.ClearAllItems();
-                }
-
-                // If ShelvingUnitComponent, eject stocked items and clear all surfaces
-                var shelvingUnit = interactableObject.GetComponent<ShelvingUnitComponent>();
-                if (shelvingUnit != null)
-                {
-                    shelvingUnit.EjectAllStockedItems();
-                    foreach (var surface in shelvingUnit.GetSurfaces())
-                        surface.ClearAllItems();
+                    Debug.Log($"[PlayerHands] Picking up ShelfContainer '{shelfContainer.name}' — ejecting and clearing stocked items.");
+                    StoreManager.Instance?.UnregisterShelf(shelfContainer);
+                    shelfContainer.EjectAllStockedItems();
+                    shelfContainer.ClearAllShelves();
                 }
 
                 heldMountable = mountable;
@@ -276,8 +257,16 @@ namespace AsakuShop.Player
                         ?? hit.collider.GetComponentInParent<IShelfHoldable>();
                     if (shelf != null && heldItem != null)
                     {
-                        TryStockItemOnShelf(shelf);
+                        // Pass the specific Shelf board that was hit (if any) so TryStockItemOnShelf
+                        // can prefer it over other child shelves in the same container.
+                        Shelf preferredShelf = hit.collider.GetComponent<Shelf>();
+                        Debug.Log($"[PlayerHands] Interact raycast hit '{hit.collider.name}' — IShelfHoldable='{shelf.GameObject.name}', preferredShelf='{preferredShelf?.name ?? "none"}'.");
+                        TryStockItemOnShelf(shelf, preferredShelf);
                         return;
+                    }
+                    else if (heldItem != null)
+                    {
+                        Debug.Log($"[PlayerHands] Interact raycast hit '{hit.collider.name}' — no IShelfHoldable found; skipping stock attempt.");
                     }
                 }
 
@@ -395,16 +384,15 @@ namespace AsakuShop.Player
                     rb.useGravity = false;
                 }
 
-                var shelfComponent = heldMountable.GameObject.GetComponent<ShelfComponent>();
-                if (shelfComponent != null && placedOnWall)
+                var shelfContainer = heldMountable.GameObject.GetComponent<ShelfContainer>();
+                if (shelfContainer != null && (placedOnWall || placedOnGround))
                 {
-                    shelfComponent.NotifyMounted();
+                    Debug.Log($"[PlayerHands] Placing ShelfContainer '{shelfContainer.name}' — placedOnWall={placedOnWall}, placedOnGround={placedOnGround}.");
                     var store = StoreManager.Instance;
-                    if (store != null && store.StoreBounds.Contains(shelfComponent.transform.position))
-                        store.RegisterShelf(shelfComponent);
+                    if (store != null && store.StoreBounds.Contains(shelfContainer.transform.position))
+                        store.RegisterShelf(shelfContainer);
                     else
-                        Debug.Log($"[PlayerHands] {shelfComponent.name} mounted outside store bounds — not registered.");
-                    shelfComponent.IsMoving = false;
+                        Debug.Log($"[PlayerHands] {shelfContainer.name} mounted outside store bounds — not registered.");
                 }
 
                 heldMountable.NotifyMounted();
@@ -439,65 +427,92 @@ namespace AsakuShop.Player
             }
         }
 
-        private void TryStockItemOnShelf(IShelfHoldable shelf)
+        private void TryStockItemOnShelf(IShelfHoldable shelf, Shelf preferredShelf = null)
         {
             if (heldItem == null || shelf == null) return;
+
+            Debug.Log($"[PlayerHands] TryStockItemOnShelf — item='{heldItem.Definition.DisplayName}', container='{shelf.GameObject.name}', preferredShelf='{preferredShelf?.name ?? "none"}'.");
+
             if (!IsShelfMounted(shelf))
             {
-                Debug.Log("[STOCK] Cannot stock item on a shelf that is not mounted.");
+                Debug.Log("[PlayerHands] STOCK blocked — shelf container is not mounted.");
                 return;
             }
 
-            IStorageUnit storageUnit = shelf.GameObject.GetComponent<IStorageUnit>();
-            IShelfLayout shelfLayout = shelf.GameObject.GetComponent<IShelfLayout>();
+            IStorageUnit storageUnit = null;
+            IShelfLayout shelfLayout = null;
+
+            // Prefer the specific Shelf board the player was looking at.
+            if (preferredShelf != null)
+            {
+                if (preferredShelf.CanAddItem(heldItem))
+                {
+                    Debug.Log($"[PlayerHands] STOCK — using preferred Shelf '{preferredShelf.name}'.");
+                    storageUnit = preferredShelf;
+                    shelfLayout = preferredShelf;
+                }
+                else
+                {
+                    Debug.Log($"[PlayerHands] STOCK — preferred Shelf '{preferredShelf.name}' cannot accept item; searching other boards.");
+                }
+            }
 
             if (storageUnit == null || shelfLayout == null)
             {
-                // Fall back to children — multi-surface units (e.g. ShelvingUnitComponent) keep
-                // IStorageUnit / IShelfLayout on their ShelvingUnitSurface children, not the root.
-                foreach (var unit in shelf.GameObject.GetComponentsInChildren<IStorageUnit>())
+                storageUnit = shelf.GameObject.GetComponent<IStorageUnit>();
+                shelfLayout = shelf.GameObject.GetComponent<IShelfLayout>();
+
+                if (storageUnit == null || shelfLayout == null)
                 {
-                    if (unit.CanAddItem(heldItem) && unit is IShelfLayout layout)
+                    // Fall back to children — Shelf boards keep IStorageUnit / IShelfLayout on the child objects.
+                    Debug.Log($"[PlayerHands] STOCK — no IStorageUnit/IShelfLayout on container root; searching children.");
+                    foreach (var unit in shelf.GameObject.GetComponentsInChildren<IStorageUnit>())
                     {
-                        storageUnit = unit;
-                        shelfLayout = layout;
-                        break;
+                        if (unit.CanAddItem(heldItem) && unit is IShelfLayout layout)
+                        {
+                            storageUnit = unit;
+                            shelfLayout = layout;
+                            Debug.Log($"[PlayerHands] STOCK — found accepting Shelf child '{(unit as MonoBehaviour)?.name}'.");
+                            break;
+                        }
                     }
                 }
             }
 
             if (storageUnit == null)
             {
-                Debug.Log("[STOCK] Cannot stock item — no IStorageUnit found on shelf.");
+                Debug.Log("[PlayerHands] STOCK failed — no IStorageUnit found on shelf or any child.");
                 return;
             }
 
             if (shelfLayout == null)
             {
-                Debug.Log("[STOCK] Cannot stock item — no IShelfLayout found on shelf.");
+                Debug.Log("[PlayerHands] STOCK failed — no IShelfLayout found on shelf or any child.");
                 return;
             }
 
             if (!storageUnit.CanAddItem(heldItem))
             {
-                Debug.Log("Cannot stock item — shelf is full or item size not supported.");
+                Debug.Log($"[PlayerHands] STOCK failed — shelf '{(storageUnit as MonoBehaviour)?.name}' is full or item size not supported.");
                 return;
             }
 
             ItemInstance itemToStock = heldItem;
             if (!storageUnit.TryAddItem(itemToStock))
             {
-                Debug.Log("[STOCK] TryAddItem failed unexpectedly.");
+                Debug.Log("[PlayerHands] STOCK failed — TryAddItem returned false unexpectedly.");
                 return;
             }
 
             Vector3 localOffset = shelfLayout.GetSlotPosition(itemToStock) + shelfLayout.GetStockingOffset();
             Vector3 stockingRotationEuler = shelfLayout.GetStockingRotation();
 
+            Debug.Log($"[PlayerHands] STOCK — placing '{itemToStock.Definition.DisplayName}' at localOffset={localOffset}, rotation={stockingRotationEuler}.");
+
             GameObject visual = heldItemVisual;
             // Parent to the object that owns the slot layout so local positions are correct.
-            // For ShelfComponent this is the shelf root; for ShelvingUnitSurface it is the surface.
             Transform stockParent = (storageUnit as MonoBehaviour)?.transform ?? shelf.GameObject.transform;
+            Debug.Log($"[PlayerHands] STOCK — parenting visual to '{stockParent.name}'.");
             visual.transform.SetParent(stockParent);
 
             Collider[] colliders = visual.GetComponentsInChildren<Collider>();
@@ -520,6 +535,7 @@ namespace AsakuShop.Player
                     pickup.Initialize(itemToStock);
 
                     itemToStock.IsOnAShelf = true;
+                    Debug.Log($"[PlayerHands] STOCK complete — '{itemToStock.Definition.DisplayName}' is now on shelf.");
 
                     int itemLayer = LayerMask.NameToLayer("Item");
                     foreach (Transform t in visual.GetComponentsInChildren<Transform>(true))

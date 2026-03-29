@@ -56,15 +56,15 @@ namespace AsakuShop.Store
 
 
         [Header("Shelves")]
-        private readonly List<ShelfComponent> _registeredShelves = new();
-        public IReadOnlyList<ShelfComponent> RegisteredShelves => _registeredShelves;
-        public void RegisterShelf(ShelfComponent shelf)
+        private readonly List<ShelfContainer> _registeredShelves = new();
+        public IReadOnlyList<ShelfContainer> RegisteredShelves => _registeredShelves;
+        public void RegisterShelf(ShelfContainer shelf)
         {
             if (shelf == null || _registeredShelves.Contains(shelf)) return;
             _registeredShelves.Add(shelf);
             Debug.Log($"[StoreManager] Shelf registered: {shelf.name} ({_registeredShelves.Count} total)");
         }
-        public void UnregisterShelf(ShelfComponent shelf)
+        public void UnregisterShelf(ShelfContainer shelf)
         {
             if (_registeredShelves.Remove(shelf))
                 Debug.Log($"[StoreManager] Shelf unregistered: {shelf.name} ({_registeredShelves.Count} remaining)");
@@ -186,53 +186,35 @@ namespace AsakuShop.Store
 
 
 #region Shelving Validation
-        public void ValidateShelvingUnit(ShelfComponent shelf)
+        public void ValidateShelvingUnit(ShelfContainer shelf)
         {
             if (shelf == null) return;
 
-            // if (shelf is not WallMountableShelf)
-            // {
-            //     //Free standing shelf logic
-            //     return;
-            // }
-            //else
-            
-            Vector3 rayOrigin = shelf.transform.position + shelf.transform.forward * 0.1f; // Slightly in front of the shelf
-            Vector3 rayDirection = -shelf.transform.forward; // Cast backwards
-            if (Physics.Raycast(rayOrigin, rayDirection, out RaycastHit hit, 1f))
+            if (IsWithinStore(shelf.transform.position))
             {
-                if (hit.collider.gameObject.CompareTag("Wall"))
-                {
-                    if (IsWithinStore(shelf.transform.position))
-                    {
-                        RegisterShelf(shelf);
-                        Debug.Log($"[StoreManager] Shelf '{shelf.name}' validated and registered.");
-                        return;
-                    }
-                    else
-                    {
-                        Debug.LogWarning($"[StoreManager] Shelf '{shelf.name}' is facing a wall but is not properly aligned within store bounds. hitPoint={hit.point}, shelfPos={shelf.transform.position}");
-                    }
-                }
+                RegisterShelf(shelf);
+                Debug.Log($"[StoreManager] Shelf '{shelf.name}' validated and registered.");
             }
-
-            Debug.LogWarning($"[StoreManager] Shelf '{shelf.name}' failed validation and will not be registered. Ensure it is properly aligned with a wall and tagged 'Wall'.");
+            else
+            {
+                Debug.LogWarning($"[StoreManager] Shelf '{shelf.name}' is outside store bounds and will not be registered. shelfPos={shelf.transform.position}");
+            }
         }
 
         // Returns all registered shelves that currently have at least one item.
         // Customers use this to find shelves worth browsing.
-        public List<ShelfComponent> GetStockedShelves()
+        public List<ShelfContainer> GetStockedShelves()
         {
-            var result = new List<ShelfComponent>();
+            var result = new List<ShelfContainer>();
             foreach (var shelf in _registeredShelves)
-                if (shelf != null && shelf.Items.Count > 0)
+                if (shelf != null && shelf.PeekItem() != null)
                     result.Add(shelf);
             return result;
         }
 
         // Returns a random registered shelf from the browsing pool, or null if none are registered.
         // Skips any destroyed/null entries (can occur if a scene is unloaded mid-frame).
-        public ShelfComponent GetRandomShelf()
+        public ShelfContainer GetRandomShelf()
         {
             // Remove any destroyed references before sampling.
             _registeredShelves.RemoveAll(s => s == null);

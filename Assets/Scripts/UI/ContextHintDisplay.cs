@@ -126,7 +126,8 @@ namespace AsakuShop.UI
                     Ray ray = new Ray(Camera.main.transform.position, Camera.main.transform.forward);
                     if (Physics.Raycast(ray, out RaycastHit hitShelf, 3f))
                     {
-                        IShelfHoldable shelfHoldable = hitShelf.collider.GetComponent<IShelfHoldable>();
+                        IShelfHoldable shelfHoldable = hitShelf.collider.GetComponent<IShelfHoldable>()
+                            ?? hitShelf.collider.GetComponentInParent<IShelfHoldable>();
                         if (shelfHoldable != null)
                             return $"[{interactKey}]: Stock\n" +
                                    $"[{examineKey}]: Examine\n" +
