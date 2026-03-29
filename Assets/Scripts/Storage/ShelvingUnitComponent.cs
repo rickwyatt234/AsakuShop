@@ -19,6 +19,7 @@ namespace AsakuShop.Storage
         [SerializeField] private bool allowManualYawRotation = true;
 
         private List<ShelvingUnitSurface> surfaces = new();
+        private bool isMounted = false;
 
         public string DisplayName => displayName;
         public Vector3 HeldOffset => heldOffset;
@@ -26,6 +27,9 @@ namespace AsakuShop.Storage
         public GameObject GameObject => gameObject;
         public Vector3 RotationOffset => rotationOffset;
         public float MountOffsetDistance => mountOffsetDistance;
+
+        /// <summary>True once the unit has been placed on the floor; cleared when picked back up.</summary>
+        public bool IsMounted => isMounted;
 
         MountMode IMountableHoldable.MountMode => mountMode;
         MountSurfaceMask IMountableHoldable.AllowedSurfaces => allowedSurfaces;
@@ -52,14 +56,37 @@ namespace AsakuShop.Storage
 
         public List<ShelvingUnitSurface> GetSurfaces() => surfaces;
 
-        public virtual void NotifyMounted() { }
-        public virtual void NotifyPickedUp() { }
+        public virtual void NotifyMounted() { isMounted = true; }
+        public virtual void NotifyPickedUp() { isMounted = false; }
+
+        /// <summary>
+        /// Unparents every child ItemPickup and restores physics on it so items fall when
+        /// the unit is picked back up — mirrors ShelfComponent.EjectAllStockedItems().
+        /// </summary>
+        public void EjectAllStockedItems()
+        {
+            foreach (ItemPickup pickup in GetComponentsInChildren<ItemPickup>())
+            {
+                pickup.transform.SetParent(null);
+
+                if (pickup.TryGetComponent(out Rigidbody rb))
+                {
+                    rb.isKinematic = false;
+                    rb.useGravity  = true;
+                }
+
+                foreach (Collider col in pickup.GetComponentsInChildren<Collider>())
+                    col.enabled = true;
+            }
+        }
 
         public void OnInteract()
         {
             var pickupTarget = PlayerService.PickupTarget;
             if (pickupTarget == null) return;
-            if (InventoryState.IsOpen || pickupTarget.IsHoldingInteractable)
+            // A mounted (placed) shelving unit must be retrieved via Examine, not Interact,
+            // matching the same convention used by wall-mounted ShelfComponent.
+            if (InventoryState.IsOpen || isMounted || pickupTarget.IsHoldingInteractable)
                 return;
             pickupTarget.TryPickupInteractable(gameObject);
         }
