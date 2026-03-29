@@ -23,6 +23,10 @@ namespace AsakuShop.Core
         public static event Action<IInteractable> OnContextHintRequested;
         public static event Action OnContextHintHideRequested;
 
+        // Fired when the player examines a shelved item and the price editor should open.
+        // Payload is the ItemInstance whose price is to be set.
+        public static event Action<object> OnShelfItemPriceEditRequested;
+
         // Store events
         public static event Action OnStoreOpened;
         public static event Action OnStoreClosed;
@@ -63,6 +67,9 @@ namespace AsakuShop.Core
         public static void RaiseContextHintHideRequested()
             => OnContextHintHideRequested?.Invoke();
 
+        public static void RaiseShelfItemPriceEditRequested(object item)
+            => OnShelfItemPriceEditRequested?.Invoke(item);
+
         // Store raise helpers
         public static void RaiseStoreOpened()
             => OnStoreOpened?.Invoke();
@@ -95,6 +102,7 @@ namespace AsakuShop.Core
             OnExamineRequested          = null;
             OnContextHintRequested      = null;
             OnContextHintHideRequested  = null;
+            OnShelfItemPriceEditRequested = null;
             OnStoreOpened               = null;
             OnStoreClosed               = null;
             OnCustomerEntered           = null;

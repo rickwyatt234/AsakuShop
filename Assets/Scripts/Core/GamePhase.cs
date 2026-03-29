@@ -27,6 +27,11 @@ namespace AsakuShop.Core
         //Player is examining an item in detail. Triggered by pressing examine on an item in the world or inventory. Clock ticks continuously.
         ItemExamination,
 
+        // Player is setting the retail price of a shelved item via the price editor UI.
+        // Triggered by pressing Examine on an item that has IsOnAShelf set to true.
+        // Clock ticks continuously.
+        PriceSetting,
+
         Checkout, // Player is at the checkout counter. Triggered by interacting with the counter. Clock ticks continuously.
 
         /// Game is paused. Overlays any phase except Boot and MainMenu.
