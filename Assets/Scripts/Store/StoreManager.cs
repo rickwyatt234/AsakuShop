@@ -162,7 +162,13 @@ namespace AsakuShop.Store
                     int randomSpawnPointIndex = Random.Range(0, spawnPoints.Count);
                     Transform spawnPoint = spawnPoints[randomSpawnPointIndex];
 
-                    GameObject customerObj = Instantiate(customerPrefab, spawnPoint.position, spawnPoint.rotation);
+                    if (!NavMesh.SamplePosition(spawnPoint.position, out NavMeshHit spawnHit, 2f, NavMesh.AllAreas))
+                    {
+                        Debug.LogWarning($"[StoreManager] Spawn point '{spawnPoint.name}' is not close enough to the NavMesh — skipping spawn.");
+                        continue;
+                    }
+
+                    GameObject customerObj = Instantiate(customerPrefab, spawnHit.position, spawnPoint.rotation);
                     var checkoutCustomer = customerObj.GetComponent<ICheckoutCustomer>();
                     customers.Add(checkoutCustomer);
                     checkoutCustomer.OnLeave += () => customers.Remove(checkoutCustomer);
