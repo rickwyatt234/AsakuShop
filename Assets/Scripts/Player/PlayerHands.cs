@@ -226,7 +226,7 @@ namespace AsakuShop.Player
                 heldShelf = (mountable is IShelfHoldable shelfHoldable) ? shelfHoldable : null;
 
                 //Rebake navmesh
-                StoreManager.Instance?.RequestNavMeshUpdate();
+                StoreManager.Instance?.UpdateNavMeshSurface();
             }
             else if (container != null)
             {
@@ -246,7 +246,7 @@ namespace AsakuShop.Player
                     .SetEase(Ease.OutCubic);
 
                 //Rebake navmesh
-                StoreManager.Instance?.RequestNavMeshUpdate();
+                StoreManager.Instance?.UpdateNavMeshSurface();
             }
         }
 #endregion
@@ -362,7 +362,7 @@ namespace AsakuShop.Player
 
                 heldContainer = null;
                 //Rebake navmesh
-                StoreManager.Instance?.RequestNavMeshUpdate();
+                StoreManager.Instance?.UpdateNavMeshSurface();
             }
             else if (heldMountable != null)
             {
@@ -425,7 +425,7 @@ namespace AsakuShop.Player
             previewRotation = Vector3.zero;
 
             //Rebake navmesh
-            StoreManager.Instance?.RequestNavMeshUpdate();
+            StoreManager.Instance?.UpdateNavMeshSurface();
         }
 
         private void TryStoreItem(IHoldable container)

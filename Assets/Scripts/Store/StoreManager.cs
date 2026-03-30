@@ -13,25 +13,11 @@ namespace AsakuShop.Store
 {
     // Central manager for the convenience store. Tracks open/closed state,
     // registered shelves and checkout counters, and spawns pedestrian/customer NPCs.
-    // Call UpdateNavMeshSurface() after the player moves furniture to rebake the NavMesh at runtime.
+    // NavMesh is baked in the Editor — this class never calls BuildNavMesh() at runtime.
     public class StoreManager : MonoBehaviour
     {
 #region Singleton and Initialization
         public static StoreManager Instance { get; private set; }
-
-        // Registers the bootstrap factory with GameBootstrapper before any scene loads.
-        // This avoids a cyclic assembly reference between AsakuShop.Core and AsakuShop.Store.
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void RegisterBootstrapper()
-        {
-            GameBootstrapper.RegisterBootstrapper(() =>
-            {
-                if (Instance != null) return;
-                GameObject go = new GameObject("[StoreManager]");
-                go.AddComponent<StoreManager>();
-                // DontDestroyOnLoad is called inside StoreManager.Awake().
-            });
-        }
 #endregion
 
 
@@ -96,20 +82,7 @@ namespace AsakuShop.Store
 
         [Header("NavMesh")]
         private NavMeshSurface navMeshSurface;
-
-        // Rebakes the NavMesh after furniture has been moved. The NavMeshSurface lives on a
-        // scene GameObject, so we look it up lazily rather than via GetComponent (this
-        // StoreManager is created as a bare procedural GameObject and will never have one).
-        public void UpdateNavMeshSurface()
-        {
-            if (navMeshSurface == null)
-                navMeshSurface = FindAnyObjectByType<NavMeshSurface>();
-
-            if (navMeshSurface != null)
-                navMeshSurface.BuildNavMesh();
-            else
-                Debug.LogWarning("[StoreManager] UpdateNavMeshSurface: no NavMeshSurface found in the current scene.");
-        }
+        public void UpdateNavMeshSurface() => navMeshSurface.BuildNavMesh();
 #endregion
 
 
@@ -124,7 +97,7 @@ namespace AsakuShop.Store
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
-            navMeshSurface = FindAnyObjectByType<NavMeshSurface>();
+            navMeshSurface = GetComponent<NavMeshSurface>();
         }
 
         private void OnEnable()
@@ -290,7 +263,6 @@ namespace AsakuShop.Store
     }
 #endregion
 
-
         #if UNITY_EDITOR
         private void OnDrawGizmosSelected()
         {
@@ -317,6 +289,8 @@ namespace AsakuShop.Store
             Gizmos.DrawWireCube(storeBounds.center, storeBounds.size);
         }
         #endif
+            
+        
     }
 
 }
