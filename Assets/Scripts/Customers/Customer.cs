@@ -246,11 +246,16 @@ namespace AsakuShop.Customers
                         isPicking = false;
 
                         bool isIdle = false;
-                        while (!isIdle)
+                        float idleTimeout = 5f;
+                        float idleElapsed = 0f;
+                        while (!isIdle && idleElapsed < idleTimeout)
                         {
                             isIdle = animator.GetCurrentAnimatorStateInfo(0).IsName("Idle");
+                            idleElapsed += Time.deltaTime;
                             yield return null;
                         }
+                        if (idleElapsed >= idleTimeout)
+                            Debug.LogWarning($"[Customer] {gameObject.name} timed out waiting for Idle animation state — check Animator Controller state names.", this);
 
                         if (taken.Pickup != null)
                             Destroy(taken.Pickup.gameObject);
