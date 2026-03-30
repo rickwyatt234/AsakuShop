@@ -59,12 +59,13 @@ namespace AsakuShop.Storage
              {
                  var sprite = ItemPreviewManager.Instance.GetPreviewSprite(entry.itemInstance.Definition);
                  
-                 if (sprite != null)
-                 {
-                     itemImage.sprite = sprite;
-                     itemImage.preserveAspect = true;
-                     itemImage.alphaHitTestMinimumThreshold = 0.1f;
-                 }
+                if (sprite != null)
+                {
+                    itemImage.sprite = sprite;
+                    itemImage.preserveAspect = true;
+                    itemImage.alphaHitTestMinimumThreshold = 0.1f;
+                    itemImage.rectTransform.localRotation = Quaternion.Euler(0, 0, 180);
+                }
                  else
                  {
                      itemImage.color = new Color(0.5f, 0.5f, 0.5f, 1f);
@@ -128,9 +129,12 @@ namespace AsakuShop.Storage
             }
             else
             {
-                // Drop item into world
-                inventoryUI.DropItemToWorld(Entry);
-                Destroy(gameObject); // Remove from UI
+                // Try to stock on a shelf first; fall back to world drop
+                if (!inventoryUI.TryDropItemOnShelf(Entry))
+                {
+                    inventoryUI.DropItemToWorld(Entry);
+                }
+                Destroy(gameObject);
             }
         }
 #endregion

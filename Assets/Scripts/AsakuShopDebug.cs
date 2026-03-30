@@ -18,10 +18,25 @@ namespace AsakuShop.Core
                 Debug.Log("GameClock or ItemRegistry not found. Make sure they are properly initialized in the scene.");
                 return;
             }
-            ItemInstanceSpawner.SpawnItemInstance("item_sack_of_rice", spawnPoint.position, spawnPoint.rotation);
-            ItemInstanceSpawner.SpawnItemInstance("item_ramune_bottle", spawnPoint.position, spawnPoint.rotation);
-            ItemInstanceSpawner.SpawnItemInstance("item_single_cup_noodle", spawnPoint.position, spawnPoint.rotation);
 
+            ItemInstanceSpawner.SpawnItemInstance("item_sack_of_rice", spawnPoint.position, spawnPoint.rotation);
+            ItemInstanceSpawner.SpawnItemInstance("item_sack_of_rice", spawnPoint.position, spawnPoint.rotation);
+            ItemInstanceSpawner.SpawnItemInstance("item_sack_of_rice", spawnPoint.position, spawnPoint.rotation);
+            ItemInstanceSpawner.SpawnItemInstance("item_sack_of_rice", spawnPoint.position, spawnPoint.rotation);
+            ItemInstanceSpawner.SpawnItemInstance("item_sack_of_rice", spawnPoint.position, spawnPoint.rotation);
+            ItemInstanceSpawner.SpawnItemInstance("item_sack_of_rice", spawnPoint.position, spawnPoint.rotation);
+            ItemInstanceSpawner.SpawnItemInstance("item_sack_of_rice", spawnPoint.position, spawnPoint.rotation);
+            ItemInstanceSpawner.SpawnItemInstance("item_sack_of_rice", spawnPoint.position, spawnPoint.rotation);
+            ItemInstanceSpawner.SpawnItemInstance("item_sack_of_rice", spawnPoint.position, spawnPoint.rotation);
+            ItemInstanceSpawner.SpawnItemInstance("item_sack_of_rice", spawnPoint.position, spawnPoint.rotation);
+            ItemInstanceSpawner.SpawnItemInstance("item_sack_of_rice", spawnPoint.position, spawnPoint.rotation);
+            ItemInstanceSpawner.SpawnItemInstance("item_sack_of_rice", spawnPoint.position, spawnPoint.rotation);
+            ItemInstanceSpawner.SpawnItemInstance("item_sack_of_rice", spawnPoint.position, spawnPoint.rotation);
+            ItemInstanceSpawner.SpawnItemInstance("item_sack_of_rice", spawnPoint.position, spawnPoint.rotation);
+            ItemInstanceSpawner.SpawnItemInstance("item_sack_of_rice", spawnPoint.position, spawnPoint.rotation);
+            ItemInstanceSpawner.SpawnItemInstance("item_sack_of_rice", spawnPoint.position, spawnPoint.rotation);
+            ItemInstanceSpawner.SpawnItemInstance("item_sack_of_rice", spawnPoint.position, spawnPoint.rotation);
+            ItemInstanceSpawner.SpawnItemInstance("item_sack_of_rice", spawnPoint.position, spawnPoint.rotation);
 
         }
     } 

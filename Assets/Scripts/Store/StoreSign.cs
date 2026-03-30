@@ -9,6 +9,7 @@ namespace AsakuShop.Store
     public class StoreSign : MonoBehaviour, IInteractable
     {
         [SerializeField] private StoreManager storeManager;
+        private bool signInteractedWithThisFrame = false;
 
         [SerializeField, Tooltip("Optional world-space TMP label on the sign itself.")]
         private TextMeshPro signText;
@@ -34,9 +35,22 @@ namespace AsakuShop.Store
                 return;
             }
 
+            if (signInteractedWithThisFrame)
+            {
+                //Debug.Log("[StoreSign] Interaction ignored to prevent rapid toggling.");
+                return;
+            }
+
+             signInteractedWithThisFrame = true;
+             Invoke(nameof(ResetInteractionFlag), 0.2f); // Reset after short delay to allow next interaction
             mgr.ToggleOpen();
             //Debug.Log($"[StoreSign] Store is now {(mgr.IsOpen ? "OPEN" : "CLOSED")}");
             RefreshSignText();
+        }
+
+        private void ResetInteractionFlag()
+        {
+            signInteractedWithThisFrame = false;
         }
 
         //Called when the player looks at the sign — no action needed here.

@@ -36,14 +36,14 @@ namespace AsakuShop.Storage
         private void Awake()
         {
             boxCollider = GetComponent<BoxCollider>();
-            Debug.Log($"[Shelf] '{name}' awake — {slotColumns} col × {slotRows} row = {slotColumns * slotRows} slots. Parent container: '{(ShelfContainer != null ? ShelfContainer.name : "none (set later)")}').");
+            //Debug.Log($"[Shelf] '{name}' awake — {slotColumns} col × {slotRows} row = {slotColumns * slotRows} slots. Parent container: '{(ShelfContainer != null ? ShelfContainer.name : "none (set later)")}').");
         }
 
         /// <summary>Enables or disables this shelf's collider (e.g. disabled while the parent is being carried).</summary>
         public void ToggleInteraction(bool enabled)
         {
             boxCollider.enabled = enabled;
-            Debug.Log($"[Shelf] '{name}' interaction {(enabled ? "ENABLED" : "DISABLED")}.");
+            //Debug.Log($"[Shelf] '{name}' interaction {(enabled ? "ENABLED" : "DISABLED")}.");
         }
 
 #region Slot Helpers
@@ -101,18 +101,18 @@ namespace AsakuShop.Storage
         {
             if (item == null)
             {
-                Debug.LogWarning($"[Shelf] '{name}' CanAddItem — item is null.");
+                //Debug.LogWarning($"[Shelf] '{name}' CanAddItem — item is null.");
                 return false;
             }
             if (!Array.Exists(allowedStockingSizes, s => s == item.Definition.StockingSize))
             {
-                Debug.Log($"[Shelf] '{name}' CanAddItem — '{item.Definition.DisplayName}' size {item.Definition.StockingSize} not in allowed sizes.");
+                //Debug.Log($"[Shelf] '{name}' CanAddItem — '{item.Definition.DisplayName}' size {item.Definition.StockingSize} not in allowed sizes.");
                 return false;
             }
             int slotSize = GetSlotSize(item);
             int anchor = FindAnchorSlot(slotSize);
             bool result = anchor >= 0;
-            Debug.Log($"[Shelf] '{name}' CanAddItem '{item.Definition.DisplayName}' (size={slotSize}) — anchor={anchor}, result={result}. [{items.Count}/{GetCapacity()} stocked]");
+            //Debug.Log($"[Shelf] '{name}' CanAddItem '{item.Definition.DisplayName}' (size={slotSize}) — anchor={anchor}, result={result}. [{items.Count}/{GetCapacity()} stocked]");
             return result;
         }
 
@@ -120,18 +120,18 @@ namespace AsakuShop.Storage
         {
             if (!CanAddItem(item))
             {
-                Debug.Log($"[Shelf] '{name}' TryAddItem '{item?.Definition?.DisplayName}' — CanAddItem returned false.");
+                //Debug.Log($"[Shelf] '{name}' TryAddItem '{item?.Definition?.DisplayName}' — CanAddItem returned false.");
                 return false;
             }
             int anchor = FindAnchorSlot(GetSlotSize(item));
             if (anchor < 0)
             {
-                Debug.LogWarning($"[Shelf] '{name}' TryAddItem — FindAnchorSlot returned -1 after CanAddItem passed (unexpected).");
+                //Debug.LogWarning($"[Shelf] '{name}' TryAddItem — FindAnchorSlot returned -1 after CanAddItem passed (unexpected).");
                 return false;
             }
             items.Add(item);
             itemToSlotIndex[item] = anchor;
-            Debug.Log($"[Shelf] '{name}' TryAddItem — added '{item.Definition.DisplayName}' at anchor slot {anchor}. [{items.Count}/{GetCapacity()} stocked]");
+            //Debug.Log($"[Shelf] '{name}' TryAddItem — added '{item.Definition.DisplayName}' at anchor slot {anchor}. [{items.Count}/{GetCapacity()} stocked]");
             return true;
         }
 
@@ -139,11 +139,11 @@ namespace AsakuShop.Storage
         {
             if (!items.Remove(item))
             {
-                Debug.LogWarning($"[Shelf] '{name}' TryRemoveItem — '{item?.Definition?.DisplayName}' was not found in items list.");
+                //Debug.LogWarning($"[Shelf] '{name}' TryRemoveItem — '{item?.Definition?.DisplayName}' was not found in items list.");
                 return false;
             }
             itemToSlotIndex.Remove(item);
-            Debug.Log($"[Shelf] '{name}' TryRemoveItem — removed '{item.Definition.DisplayName}'. [{items.Count}/{GetCapacity()} remaining]");
+            //Debug.Log($"[Shelf] '{name}' TryRemoveItem — removed '{item.Definition.DisplayName}'. [{items.Count}/{GetCapacity()} remaining]");
             return true;
         }
 
@@ -165,7 +165,7 @@ namespace AsakuShop.Storage
             int count = items.Count;
             items.Clear();
             itemToSlotIndex.Clear();
-            Debug.Log($"[Shelf] '{name}' ClearAllItems — cleared {count} item(s).");
+            //Debug.Log($"[Shelf] '{name}' ClearAllItems — cleared {count} item(s).");
         }
 #endregion
 
@@ -195,13 +195,13 @@ namespace AsakuShop.Storage
         {
             if (items.Count == 0)
             {
-                Debug.Log($"[Shelf] '{name}' TakeItem — shelf is empty.");
+                //Debug.Log($"[Shelf] '{name}' TakeItem — shelf is empty.");
                 return default;
             }
             ItemInstance item   = items[0];
             ItemPickup   pickup = FindPickupForItem(item);
             TryRemoveItem(item);
-            Debug.Log($"[Shelf] '{name}' TakeItem — took '{item.Definition.DisplayName}'. Pickup found={pickup != null}.");
+            //Debug.Log($"[Shelf] '{name}' TakeItem — took '{item.Definition.DisplayName}'. Pickup found={pickup != null}.");
             return new ShelfTakeResult(item, pickup);
         }
 
@@ -211,7 +211,7 @@ namespace AsakuShop.Storage
             foreach (ItemPickup p in GetComponentsInChildren<ItemPickup>(true))
                 if (p != null && ReferenceEquals(p.ItemInstance, item))
                     return p;
-            Debug.LogWarning($"[Shelf] '{name}' FindPickupForItem — no matching ItemPickup found for '{item.Definition.DisplayName}'.");
+            //Debug.LogWarning($"[Shelf] '{name}' FindPickupForItem — no matching ItemPickup found for '{item.Definition.DisplayName}'.");
             return null;
         }
 #endregion

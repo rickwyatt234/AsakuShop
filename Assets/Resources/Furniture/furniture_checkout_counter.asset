@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f934e6a66654f0042b3273f43ef3aea8, type: 3}
+  m_Name: furniture_checkout_counter
+  m_EditorClassIdentifier: AsakuShop.Items::AsakuShop.Items.FurnitureDefinition
+  ItemId: furniture_checkout_counter
+  DisplayName: Checkout Counter
+  BasePrice: 5000
+  WorldPrefab: {fileID: 522532475584070102, guid: 1bfbcad88a7e59b4f90b084837400ce1, type: 3}

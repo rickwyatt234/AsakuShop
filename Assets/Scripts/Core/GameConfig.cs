@@ -39,10 +39,10 @@ namespace AsakuShop.Core
         private int startingMoney = 2000;
 
         [SerializeField, Tooltip("The minimum time (in seconds) between customer spawns.")]
-        private float minSpawnTime = 5f;
+        private float minSpawnTime = 0.1f;
 
         [SerializeField, Tooltip("The maximum time (in seconds) between customer spawns.")]
-        private float maxSpawnTime = 15f;
+        private float maxSpawnTime = 0.1f;
 
         [SerializeField, Tooltip("The base maximum number of customers that can be in the store at the same time.")]
         private int baseMaxCustomers = 5;

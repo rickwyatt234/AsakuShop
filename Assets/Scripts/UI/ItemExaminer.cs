@@ -138,24 +138,21 @@ namespace AsakuShop.UI
             // Instantiate the item model
             if (currentExaminedItem?.Definition?.WorldPrefab != null)
             {
-                // Resolve the display parent; fall back to a camera-anchored runtime anchor
-                // when itemDisplayParent has not been assigned in the Inspector.
-                Transform displayParent = itemDisplayParent;
-                if (displayParent == null)
+                // Always use a world-space anchor parented to the camera so
+                // the 3D model renders correctly regardless of canvas render mode.
+                Camera mainCam = Camera.main;
+                if (mainCam != null)
                 {
-                    Camera mainCam = Camera.main;
-                    if (mainCam != null)
+                    if (runtimeDisplayAnchor == null)
                     {
-                        if (runtimeDisplayAnchor == null)
-                        {
-                            runtimeDisplayAnchor = new GameObject("ExaminationDisplayAnchor").transform;
-                            runtimeDisplayAnchor.SetParent(mainCam.transform, false);
-                            runtimeDisplayAnchor.localPosition = new Vector3(0f, 0f, itemDisplayDistance);
-                            runtimeDisplayAnchor.localRotation = Quaternion.identity;
-                        }
-                        displayParent = runtimeDisplayAnchor;
+                        runtimeDisplayAnchor = new GameObject("ExaminationDisplayAnchor").transform;
+                        runtimeDisplayAnchor.SetParent(mainCam.transform, false);
+                        runtimeDisplayAnchor.localPosition = new Vector3(0f, 0f, itemDisplayDistance);
+                        runtimeDisplayAnchor.localRotation = Quaternion.identity;
                     }
                 }
+
+                Transform displayParent = runtimeDisplayAnchor != null ? runtimeDisplayAnchor : itemDisplayParent;
 
                 examinedItemDisplay = Instantiate(
                     currentExaminedItem.Definition.WorldPrefab,

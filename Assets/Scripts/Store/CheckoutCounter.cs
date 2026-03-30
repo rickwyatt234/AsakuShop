@@ -119,7 +119,9 @@ namespace AsakuShop.Store
             EnterCheckoutMode();
         }
 
-        public void OnExamine() { }
+        public void OnExamine()
+        {        }
+
 
         public void OnCancel()
         {

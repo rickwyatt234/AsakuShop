@@ -51,7 +51,7 @@ namespace AsakuShop.Storage
             }
             else
             {
-                Debug.LogWarning("[StorageContainer] No IPickupTarget registered in PlayerService.");
+                //Debug.LogWarning("[StorageContainer] No IPickupTarget registered in PlayerService.");
             }
         }
 

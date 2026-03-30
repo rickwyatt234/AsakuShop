@@ -65,7 +65,19 @@ namespace AsakuShop.Storage
             Shelves = GetComponentsInChildren<Shelf>(true).ToList();
             foreach (var shelf in Shelves)
                 shelf.ShelfContainer = this;
-            Debug.Log($"[ShelfContainer] '{name}' awake — found {Shelves.Count} child Shelf(s).");
+
+            // Child shelf colliders must start disabled when not mounted,
+            // otherwise they block the raycast from reaching ShelfContainer's IInteractable.
+            if (!IsMounted)
+            {
+                foreach (var shelf in Shelves)
+                {
+                    var col = shelf.GetComponent<BoxCollider>();
+                    if (col != null) col.enabled = false;
+                }
+            }
+
+            //Debug.Log($"[ShelfContainer] '{name}' awake — found {Shelves.Count} child Shelf(s).");
         }
 #endregion
 
@@ -75,7 +87,7 @@ namespace AsakuShop.Storage
             IsMounted = true;
             IsMoving = false;
             Shelves.ForEach(s => s.ToggleInteraction(true));
-            Debug.Log($"[ShelfContainer] '{name}' mounted at {transform.position}. Shelf colliders enabled.");
+            //Debug.Log($"[ShelfContainer] '{name}' mounted at {transform.position}. Shelf colliders enabled.");
         }
 
         public virtual void NotifyPickedUp()
@@ -83,73 +95,73 @@ namespace AsakuShop.Storage
             IsMounted = false;
             IsMoving = true;
             Shelves.ForEach(s => s.ToggleInteraction(false));
-            Debug.Log($"[ShelfContainer] '{name}' picked up. Shelf colliders disabled.");
+            //Debug.Log($"[ShelfContainer] '{name}' picked up. Shelf colliders disabled.");
         }
 
         /// <summary>Override in subclasses (e.g. Fridge) to open the unit door.</summary>
         public virtual void Open(bool forced, bool playSFX)
         {
             IsOpen = true;
-            Debug.Log($"[ShelfContainer] '{name}' opened (forced={forced}).");
+            //Debug.Log($"[ShelfContainer] '{name}' opened (forced={forced}).");
         }
 
         /// <summary>Override in subclasses (e.g. Fridge) to close the unit door.</summary>
         public virtual void Close(bool forced, bool playSFX)
         {
             IsOpen = false;
-            Debug.Log($"[ShelfContainer] '{name}' closed (forced={forced}).");
+            //Debug.Log($"[ShelfContainer] '{name}' closed (forced={forced}).");
         }
 #endregion
 
 #region IInteractable
         public void OnInteract()
         {
-            Debug.Log($"[ShelfContainer] OnInteract called on '{name}'. IsMounted={IsMounted}, IsOpen={IsOpen}.");
+            //Debug.Log($"[ShelfContainer] OnInteract called on '{name}'. IsMounted={IsMounted}, IsOpen={IsOpen}.");
             var pickupTarget = PlayerService.PickupTarget;
             if (pickupTarget == null)
             {
-                Debug.LogWarning($"[ShelfContainer] OnInteract — no IPickupTarget found in PlayerService.");
+                //Debug.LogWarning($"[ShelfContainer] OnInteract — no IPickupTarget found in PlayerService.");
                 return;
             }
             if (InventoryState.IsOpen)
             {
-                Debug.Log($"[ShelfContainer] OnInteract blocked — inventory is open.");
+                //Debug.Log($"[ShelfContainer] OnInteract blocked — inventory is open.");
                 return;
             }
             if (IsMounted)
             {
-                Debug.Log($"[ShelfContainer] OnInteract blocked — unit is mounted; use Examine to pick it up.");
+                //Debug.Log($"[ShelfContainer] OnInteract blocked — unit is mounted; use Examine to pick it up.");
                 return;
             }
             if (pickupTarget.IsHoldingInteractable)
             {
-                Debug.Log($"[ShelfContainer] OnInteract blocked — player is already holding something.");
+                //Debug.Log($"[ShelfContainer] OnInteract blocked — player is already holding something.");
                 return;
             }
-            Debug.Log($"[ShelfContainer] '{name}' forwarding to TryPickupInteractable.");
+            //Debug.Log($"[ShelfContainer] '{name}' forwarding to TryPickupInteractable.");
             pickupTarget.TryPickupInteractable(gameObject);
         }
 
         public void OnExamine()
         {
-            Debug.Log($"[ShelfContainer] OnExamine called on '{name}'. IsMounted={IsMounted}.");
+            //Debug.Log($"[ShelfContainer] OnExamine called on '{name}'. IsMounted={IsMounted}.");
             var pickupTarget = PlayerService.PickupTarget;
             if (pickupTarget == null)
             {
-                Debug.LogWarning($"[ShelfContainer] OnExamine — no IPickupTarget found in PlayerService.");
+                //Debug.LogWarning($"[ShelfContainer] OnExamine — no IPickupTarget found in PlayerService.");
                 return;
             }
             if (InventoryState.IsOpen)
             {
-                Debug.Log($"[ShelfContainer] OnExamine blocked — inventory is open.");
+                //Debug.Log($"[ShelfContainer] OnExamine blocked — inventory is open.");
                 return;
             }
             if (pickupTarget.IsHoldingInteractable)
             {
-                Debug.Log($"[ShelfContainer] OnExamine blocked — player is already holding something.");
+                //Debug.Log($"[ShelfContainer] OnExamine blocked — player is already holding something.");
                 return;
             }
-            Debug.Log($"[ShelfContainer] '{name}' forwarding to TryPickupInteractable via Examine.");
+            //Debug.Log($"[ShelfContainer] '{name}' forwarding to TryPickupInteractable via Examine.");
             pickupTarget.TryPickupInteractable(gameObject);
         }
 #endregion
@@ -173,11 +185,11 @@ namespace AsakuShop.Storage
                 if (shelf.GetCurrentCount() > 0)
                 {
                     ShelfTakeResult result = shelf.TakeItem();
-                    Debug.Log($"[ShelfContainer] '{name}' — customer took '{result.Item?.Definition?.DisplayName}' from child Shelf '{shelf.name}'. Pickup found={result.Pickup != null}.");
+                    //Debug.Log($"[ShelfContainer] '{name}' — customer took '{result.Item?.Definition?.DisplayName}' from child Shelf '{shelf.name}'. Pickup found={result.Pickup != null}.");
                     return result;
                 }
             }
-            Debug.Log($"[ShelfContainer] '{name}' — TakeItem called but all child shelves are empty.");
+            //Debug.Log($"[ShelfContainer] '{name}' — TakeItem called but all child shelves are empty.");
             return default;
         }
 #endregion
@@ -189,10 +201,10 @@ namespace AsakuShop.Storage
         public void EjectAllStockedItems()
         {
             var pickups = GetComponentsInChildren<ItemPickup>();
-            Debug.Log($"[ShelfContainer] '{name}' ejecting {pickups.Length} stocked item(s).");
+            //Debug.Log($"[ShelfContainer] '{name}' ejecting {pickups.Length} stocked item(s).");
             foreach (ItemPickup pickup in pickups)
             {
-                Debug.Log($"[ShelfContainer]   Ejecting '{pickup.name}' ({pickup.ItemInstance?.Definition?.DisplayName}).");
+                //Debug.Log($"[ShelfContainer]   Ejecting '{pickup.name}' ({pickup.ItemInstance?.Definition?.DisplayName}).");
                 pickup.transform.SetParent(null);
 
                 if (pickup.TryGetComponent(out Rigidbody rb))
@@ -209,7 +221,7 @@ namespace AsakuShop.Storage
         /// <summary>Clears item data from every child <see cref="Shelf"/>.</summary>
         public void ClearAllShelves()
         {
-            Debug.Log($"[ShelfContainer] '{name}' clearing item data from {Shelves.Count} child Shelf(s).");
+            //Debug.Log($"[ShelfContainer] '{name}' clearing item data from {Shelves.Count} child Shelf(s).");
             foreach (var shelf in Shelves)
                 shelf.ClearAllItems();
         }

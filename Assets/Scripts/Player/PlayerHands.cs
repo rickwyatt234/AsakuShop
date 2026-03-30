@@ -24,13 +24,16 @@ namespace AsakuShop.Player
         public IHoldable heldContainer;
         public IShelfHoldable heldShelf;
         public IMountableHoldable heldMountable;
+        public int _storedItemFrame = -1; // Frame count when an item was stored in a container, used to prevent immediate re-pickup
+        private bool _suppressExamineUntilRelease = false; // Used to prevent examine action immediately after storing an item
 
         private bool previousInteractState = false;
         private bool previousExamineState = false;
         private bool interactPressedThisFrame = false;
         private bool examinePressedThisFrame = false;
-        public bool IsHoldingInteractable => heldItem != null || heldContainer != null || heldShelf != null || heldMountable != null;
-
+        public bool IsHoldingInteractable => heldItem != null || heldContainer != null || 
+                                            heldShelf != null || heldMountable != null || 
+                                            _suppressExamineUntilRelease;
         private GameObject recentlyDroppedObject = null;
         private float dropIgnoreTimer = 0f;
         private const float DROP_IGNORE_DURATION = 0.15f;
@@ -73,6 +76,9 @@ namespace AsakuShop.Player
             bool currentExamineState = input.examine;
             examinePressedThisFrame = currentExamineState && !previousExamineState;
             previousExamineState = currentExamineState;
+
+            if (_suppressExamineUntilRelease && !input.examine)
+                _suppressExamineUntilRelease = false;
 
             HandlePlacementPreview();
             HandlePreviewRotation();
@@ -218,6 +224,9 @@ namespace AsakuShop.Player
 
                 // For compatibility with old code
                 heldShelf = (mountable is IShelfHoldable shelfHoldable) ? shelfHoldable : null;
+
+                //Rebake navmesh
+                StoreManager.Instance?.RequestNavMeshUpdate();
             }
             else if (container != null)
             {
@@ -235,6 +244,9 @@ namespace AsakuShop.Player
                     .SetEase(Ease.OutCubic);
                 heldItemVisualTransform.DOLocalRotate(container.HeldRotation.eulerAngles, PICKUP_ANIM_DURATION)
                     .SetEase(Ease.OutCubic);
+
+                //Rebake navmesh
+                StoreManager.Instance?.RequestNavMeshUpdate();
             }
         }
 #endregion
@@ -349,6 +361,8 @@ namespace AsakuShop.Player
                 }
 
                 heldContainer = null;
+                //Rebake navmesh
+                StoreManager.Instance?.RequestNavMeshUpdate();
             }
             else if (heldMountable != null)
             {
@@ -409,6 +423,9 @@ namespace AsakuShop.Player
             heldItemVisual = null;
             heldItemVisualTransform = null;
             previewRotation = Vector3.zero;
+
+            //Rebake navmesh
+            StoreManager.Instance?.RequestNavMeshUpdate();
         }
 
         private void TryStoreItem(IHoldable container)
@@ -422,6 +439,7 @@ namespace AsakuShop.Player
             
             if (storageUnit.TryAddItem(heldItem))
             {
+                _suppressExamineUntilRelease = true;
                 ClearHeldState();
                 CoreEvents.RaiseStorageUIRefreshRequested(container.GameObject);
             }

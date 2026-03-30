@@ -7,13 +7,15 @@ using Unity.AI.Navigation;
 using UnityEngine.SceneManagement;
 using AsakuShop.Core;
 using AsakuShop.Storage;
-using Codice.Client.Common.GameUI;
 
 namespace AsakuShop.Store
 {
     // Central manager for the convenience store. Tracks open/closed state,
     // registered shelves and checkout counters, and spawns pedestrian/customer NPCs.
+<<<<<<< Updated upstream
     // Call UpdateNavMeshSurface() after the player moves furniture to rebake the NavMesh at runtime.
+=======
+>>>>>>> Stashed changes
     public class StoreManager : MonoBehaviour
     {
 #region Singleton and Initialization
@@ -95,6 +97,7 @@ namespace AsakuShop.Store
 
 
         [Header("NavMesh")]
+<<<<<<< Updated upstream
         private NavMeshSurface navMeshSurface;
 
         // Rebakes the NavMesh after furniture has been moved. The NavMeshSurface lives on a
@@ -109,6 +112,20 @@ namespace AsakuShop.Store
                 navMeshSurface.BuildNavMesh();
             else
                 Debug.LogWarning("[StoreManager] UpdateNavMeshSurface: no NavMeshSurface found in the current scene.");
+=======
+        private AsyncOperation _navMeshUpdateOperation;
+        private bool _rebakePending;
+
+        private NavMeshSurface _navMeshSurface;
+        private NavMeshSurface NavMeshSurface
+        {
+            get
+            {
+                if (_navMeshSurface == null)
+                    _navMeshSurface = FindFirstObjectByType<NavMeshSurface>();
+                return _navMeshSurface;
+            }
+>>>>>>> Stashed changes
         }
 #endregion
 
@@ -124,21 +141,51 @@ namespace AsakuShop.Store
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
+<<<<<<< Updated upstream
             navMeshSurface = FindAnyObjectByType<NavMeshSurface>();
+=======
+            // Prefabs load from Resources — always available
+            customerPrefabs = Resources.LoadAll<GameObject>("Store/Prefabs/Customers").ToList();
+>>>>>>> Stashed changes
         }
 
         private void OnEnable()
         {
+            SceneManager.sceneLoaded   += OnSceneLoaded;
             SceneManager.sceneUnloaded += OnSceneUnloaded;
         }
 
         private void OnDisable()
         {
+            SceneManager.sceneLoaded   -= OnSceneLoaded;
             SceneManager.sceneUnloaded -= OnSceneUnloaded;
         }
 
-        private void Start()
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
+            // Skip the bootstrap scene
+            if (scene.name == "Bootstrap") return;
+
+            // Now scene objects exist — find spawn points
+            spawnPoints = GameObject.FindGameObjectsWithTag("SpawnPoint")
+                .Select(go => go.transform).ToList();
+            Debug.Log($"[StoreManager] Scene '{scene.name}' loaded — found {spawnPoints.Count} spawn point(s).");
+
+            // Bake initial NavMesh
+            _navMeshSurface = null; // Clear cached ref so it finds the new scene's surface
+            if (NavMeshSurface != null)
+            {
+                NavMeshSurface.BuildNavMesh();
+                Debug.Log("[StoreManager] Initial NavMesh baked.");
+            }
+            else
+            {
+                Debug.LogError("[StoreManager] No NavMeshSurface found in scene!");
+            }
+
+            // Start the customer spawn loop
+            if (spawnCustomerCoroutine != null)
+                StopCoroutine(spawnCustomerCoroutine);
             spawnCustomerCoroutine = StartCoroutine(SpawnCustomer());
         }
 #endregion
@@ -149,6 +196,7 @@ namespace AsakuShop.Store
         {
             while (true)
             {
+                if (NavMeshSurface == null) yield return null;
                 float waitTime = GameConfig.Instance.GetRandomSpawnTime;
                 yield return new WaitForSeconds(waitTime);
 
@@ -206,13 +254,14 @@ namespace AsakuShop.Store
             if (IsWithinStore(shelf.transform.position))
             {
                 RegisterShelf(shelf);
-                Debug.Log($"[StoreManager] Shelf '{shelf.name}' validated and registered.");
+                RequestNavMeshUpdate();
             }
             else
             {
-                Debug.LogWarning($"[StoreManager] Shelf '{shelf.name}' is outside store bounds and will not be registered. shelfPos={shelf.transform.position}");
+                Debug.LogWarning($"[StoreManager] Shelf '{shelf.name}' is outside store bounds.");
             }
         }
+
 
         // Returns all registered shelves that currently have at least one item.
         // Customers use this to find shelves worth browsing.
@@ -288,6 +337,29 @@ namespace AsakuShop.Store
     {
         void SetWantsToShop(bool value);
     }
+#endregion
+
+#region NavMesh Updates
+        public void RequestNavMeshUpdate()
+        {
+            if (_rebakePending) return;
+            _rebakePending = true;
+            StartCoroutine(RebakeNextFrame());
+        }
+        private IEnumerator RebakeNextFrame()
+        {
+            // Wait one frame to batch multiple furniture changes together
+            yield return null;
+            _rebakePending = false;
+
+            if (NavMeshSurface == null) yield break;
+
+            _navMeshUpdateOperation = NavMeshSurface.UpdateNavMesh(NavMeshSurface.navMeshData);
+            _navMeshUpdateOperation.completed += _ =>
+            {
+                Debug.Log("[StoreManager] NavMesh updated.");
+            };
+        }
 #endregion
 
 

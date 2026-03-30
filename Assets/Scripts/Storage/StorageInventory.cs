@@ -12,6 +12,7 @@ namespace AsakuShop.Storage
             private List<StorageItemEntry> items = new();
             private Vector2 inventorySize; // Width and height of inventory window
             public int Count => items.Count;
+            float margin = 40f;
 
             public StorageInventory(Vector2 containerSize)
             {
@@ -39,12 +40,13 @@ namespace AsakuShop.Storage
                  if (!CanAddItem(item))
                      return false;
 
-                 StorageItemEntry entry = new StorageItemEntry
-                 {
-                     itemInstance = item,
-                     uiPosition = new Vector2(UnityEngine.Random.Range(0, inventorySize.x), 
-                        UnityEngine.Random.Range(0, inventorySize.y)) // Random position for now
-                 };
+            StorageItemEntry entry = new StorageItemEntry
+            {
+                itemInstance = item,
+                uiPosition = new Vector2(
+                    UnityEngine.Random.Range(-inventorySize.x / 2f + margin, inventorySize.x / 2f - margin),
+                    UnityEngine.Random.Range(-inventorySize.y / 2f + margin, inventorySize.y / 2f - margin))
+            };
 
                  items.Add(entry);
                  OnInventoryChanged?.Invoke();
