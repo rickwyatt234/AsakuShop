@@ -7,13 +7,12 @@ using Unity.AI.Navigation;
 using UnityEngine.SceneManagement;
 using AsakuShop.Core;
 using AsakuShop.Storage;
-using Codice.Client.Common.GameUI;
 
 namespace AsakuShop.Store
 {
     // Central manager for the convenience store. Tracks open/closed state,
     // registered shelves and checkout counters, and spawns pedestrian/customer NPCs.
-    // NavMesh is baked in the Editor — this class never calls BuildNavMesh() at runtime.
+    // NavMesh is baked at runtime via the child NavMeshSurface so furniture moves are reflected.
     public class StoreManager : MonoBehaviour
     {
 #region Singleton and Initialization
@@ -82,7 +81,12 @@ namespace AsakuShop.Store
 
         [Header("NavMesh")]
         private NavMeshSurface navMeshSurface;
-        public void UpdateNavMeshSurface() => navMeshSurface.BuildNavMesh();
+        // Rebuilds the NavMesh at runtime (call after moving furniture, etc.)
+        public void UpdateNavMeshSurface()
+        {
+            if (navMeshSurface != null)
+                navMeshSurface.BuildNavMesh();
+        }
 #endregion
 
 
@@ -97,7 +101,7 @@ namespace AsakuShop.Store
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
-            navMeshSurface = GetComponent<NavMeshSurface>();
+            navMeshSurface = GetComponentInChildren<NavMeshSurface>();
         }
 
         private void OnEnable()
@@ -112,6 +116,31 @@ namespace AsakuShop.Store
 
         private void Start()
         {
+            // Auto-populate spawn points from scene objects tagged "SpawnPoint".
+            spawnPoints.Clear();
+            foreach (var go in GameObject.FindGameObjectsWithTag("SpawnPoint"))
+                spawnPoints.Add(go.transform);
+            Debug.Log($"[StoreManager] Found {spawnPoints.Count} spawn point(s).");
+
+            // Load customer prefabs from Resources if the list was not populated in the Inspector.
+            if (customerPrefabs.Count == 0)
+            {
+                var loaded = Resources.LoadAll<GameObject>("Store/Prefabs/Customers");
+                customerPrefabs.AddRange(loaded);
+                Debug.Log($"[StoreManager] Loaded {customerPrefabs.Count} customer prefab(s) from Resources.");
+            }
+
+            // Bake the NavMesh at runtime so furniture positions are reflected.
+            if (navMeshSurface != null)
+            {
+                navMeshSurface.BuildNavMesh();
+                Debug.Log("[StoreManager] NavMesh baked.");
+            }
+            else
+            {
+                Debug.LogWarning("[StoreManager] No NavMeshSurface found in children — NavMesh will not be baked.");
+            }
+
             spawnCustomerCoroutine = StartCoroutine(SpawnCustomer());
         }
 #endregion
@@ -264,11 +293,19 @@ namespace AsakuShop.Store
 #endregion
 
         #if UNITY_EDITOR
+        // Always draw store bounds so the yellow wireframe is visible without selecting the object.
+        private void OnDrawGizmos()
+        {
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawWireCube(storeBounds.center, storeBounds.size);
+        }
+
+        // Spawn/wander point gizmos are only drawn when the object is selected to avoid
+        // the per-frame FindGameObjectsWithTag overhead across the whole scene.
         private void OnDrawGizmosSelected()
         {
             // Spawn points - cyan
-            var spawnGOs = GameObject.FindGameObjectsWithTag("SpawnPoint");
-            foreach (var sp in spawnGOs)
+            foreach (var sp in GameObject.FindGameObjectsWithTag("SpawnPoint"))
             {
                 bool isValid = NavMesh.SamplePosition(sp.transform.position, out _, 2f, NavMesh.AllAreas);
                 Gizmos.color = isValid ? Color.cyan : Color.red;
@@ -276,17 +313,12 @@ namespace AsakuShop.Store
             }
 
             // Wander points - green
-            var wanderGOs = GameObject.FindGameObjectsWithTag("WanderPoint");
-            foreach (var wp in wanderGOs)
+            foreach (var wp in GameObject.FindGameObjectsWithTag("WanderPoint"))
             {
                 bool isValid = NavMesh.SamplePosition(wp.transform.position, out _, 2f, NavMesh.AllAreas);
                 Gizmos.color = isValid ? Color.green : Color.red;
                 Gizmos.DrawWireSphere(wp.transform.position, 0.4f);
             }
-
-            // Store bounds - yellow
-            Gizmos.color = Color.yellow;
-            Gizmos.DrawWireCube(storeBounds.center, storeBounds.size);
         }
         #endif
             
