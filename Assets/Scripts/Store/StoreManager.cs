@@ -13,7 +13,7 @@ namespace AsakuShop.Store
 {
     // Central manager for the convenience store. Tracks open/closed state,
     // registered shelves and checkout counters, and spawns pedestrian/customer NPCs.
-    // NavMesh is baked in the Editor — this class never calls BuildNavMesh() at runtime.
+    // Call UpdateNavMeshSurface() after the player moves furniture to rebake the NavMesh at runtime.
     public class StoreManager : MonoBehaviour
     {
 #region Singleton and Initialization
@@ -96,7 +96,20 @@ namespace AsakuShop.Store
 
         [Header("NavMesh")]
         private NavMeshSurface navMeshSurface;
-        public void UpdateNavMeshSurface() => navMeshSurface.BuildNavMesh();
+
+        // Rebakes the NavMesh after furniture has been moved. The NavMeshSurface lives on a
+        // scene GameObject, so we look it up lazily rather than via GetComponent (this
+        // StoreManager is created as a bare procedural GameObject and will never have one).
+        public void UpdateNavMeshSurface()
+        {
+            if (navMeshSurface == null)
+                navMeshSurface = FindAnyObjectByType<NavMeshSurface>();
+
+            if (navMeshSurface != null)
+                navMeshSurface.BuildNavMesh();
+            else
+                Debug.LogWarning("[StoreManager] UpdateNavMeshSurface: no NavMeshSurface found in the current scene.");
+        }
 #endregion
 
 
@@ -111,7 +124,7 @@ namespace AsakuShop.Store
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
-            navMeshSurface = GetComponent<NavMeshSurface>();
+            navMeshSurface = FindAnyObjectByType<NavMeshSurface>();
         }
 
         private void OnEnable()
