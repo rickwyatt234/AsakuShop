@@ -135,7 +135,7 @@ namespace AsakuShop.Customers
             else
             {
                 // Customer leaves without buying anything
-                overheadUI.ShowDialog(notFoundDialogue.GetRandomLine());
+                //overheadUI.ShowDialog(notFoundDialogue.GetRandomLine());
                 yield return Leave();
             }
         }
